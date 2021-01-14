@@ -21,7 +21,7 @@ type AdmiralPath struct {
 }
 
 func GetAdmiralPath() string {
-	file, err := os.Open("./local/config/default.json")
+	file, err := os.Open(os.Args[1])
 	if err != nil {
 		log.Println(err)
 	}
@@ -37,7 +37,7 @@ func GetAdmiralPath() string {
 }
 
 func GetTelegramKey() string {
-	file, err := os.Open("./local/config/default.json")
+	file, err := os.Open(os.Args[1])
 	if err != nil {
 		log.Println(err)
 	}

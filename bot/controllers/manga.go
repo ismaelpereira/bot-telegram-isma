@@ -18,27 +18,26 @@ func MangaHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	mangaName := strings.TrimSpace(update.Message.CommandArguments())
 	if mangaName == "" {
 		tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgManga)
-
+		return nil
 	}
 	apiResult, err := http.Get("https://api.jikan.moe/v3/search/manga?q=" + url.QueryEscape(mangaName) + "&page=1&limit=3")
 	if err != nil {
 		tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgServerError)
-		log.Println(err)
-		return nil
+		return err
 	}
 	defer apiResult.Body.Close()
 	readMangas, err := ioutil.ReadAll(apiResult.Body)
 	if err != nil {
 		tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgServerError)
 		log.Println(err)
-		return nil
+		return err
 	}
 	var searchResults types.MangaResponse
 	err = json.Unmarshal(readMangas, &searchResults)
 	if err != nil {
 		tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgServerError)
 		log.Println(err)
-		return nil
+		return err
 	}
 	for _, manga := range searchResults.Results {
 		msgs.GetMangaPictureAndSendMessage(manga, update, bot)

@@ -3,7 +3,6 @@ package controllers
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 
@@ -20,7 +19,7 @@ func AdmiralHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAdmiral)
 		_, err := bot.Send(msg)
 		if err != nil {
-			log.Println(err)
+			return err
 		}
 	}
 	file, err := os.Open(config.GetAdmiralPath())
@@ -28,9 +27,8 @@ func AdmiralHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgServerError)
 		_, err := bot.Send(msg)
 		if err != nil {
-			log.Println(err)
+			return err
 		}
-		log.Println(err)
 		return nil
 	}
 	defer file.Close()
@@ -39,9 +37,9 @@ func AdmiralHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgServerError)
 		_, err := bot.Send(msg)
 		if err != nil {
-			log.Println(err)
+
 		}
-		log.Println(err)
+		return err
 	}
 	var admiralDecoded []types.Admiral
 	err = json.Unmarshal(admiralArchive, &admiralDecoded)
@@ -49,9 +47,9 @@ func AdmiralHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgServerError)
 		_, err := bot.Send(msg)
 		if err != nil {
-			log.Println(err)
+			return err
 		}
-		log.Println(err)
+		return err
 	}
 
 	for _, admiral := range admiralDecoded {
@@ -60,5 +58,5 @@ func AdmiralHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		}
 	}
 
-	return nil
+	return err
 }

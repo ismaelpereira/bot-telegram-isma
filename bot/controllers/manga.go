@@ -17,7 +17,11 @@ import (
 func MangaHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	mangaName := strings.TrimSpace(update.Message.CommandArguments())
 	if mangaName == "" {
-		tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgManga)
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgManga)
+		_, err := bot.Send(msg)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 	apiResult, err := http.Get("https://api.jikan.moe/v3/search/manga?q=" + url.QueryEscape(mangaName) + "&page=1&limit=3")

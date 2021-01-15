@@ -31,8 +31,8 @@ const (
 	MsgNotFound       = IconWarning + " -- Desculpe, não consegui encontrar isso"
 	MsgHelp           = IconThumbsUp + " -- Os comandos são:\n/admiral\n/anime\n/manga\n"
 	MsgAdmiral        = IconWarning + " -- The Admiral command is /admiral <admiral name> "
-	MsgAnime          = IconWarning + " -- The anime command is /anime <anime name>\nThe search results is an aproximated value"
-	MsgManga          = IconWarning + " -- The manga command is /manga <manga name>\nThe search results is an aproximated value"
+	MsgAnime          = IconWarning + " -- O comando é /anime <nome do anime>\nO resultado é baseado em uma pesquisa no MyanimeList"
+	MsgManga          = IconWarning + " -- O comando é /manga <nome do mangá>\nO resultado é baseado em uma pesquisa no MyanimeList"
 )
 
 //GetAdmiralPictureAndSendMessage is a function for admiral controller

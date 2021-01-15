@@ -16,7 +16,12 @@ import (
 func AnimeHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	animeName := strings.TrimSpace(update.Message.CommandArguments())
 	if animeName == "" {
-		tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAnime)
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAnime)
+		_, err := bot.Send(msg)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	}
 	apiResult, err := http.Get("https://api.jikan.moe/v3/search/anime?q=" + url.QueryEscape(animeName) + "&page=1&limit=3&type=tv")

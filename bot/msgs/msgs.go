@@ -144,8 +144,6 @@ func GetMangaStatus(m *types.Manga) error {
 	}
 	japaneseStartPosition := []byte("Japanese:</span>")
 	japaneseEndPosition := []byte("</div>")
-	// statusStartPosition := string("Status:</span>")
-	// statusEndPosition := string("</div>")
 	startJp := bytes.Index(animeListCode, japaneseStartPosition)
 	endJp := bytes.Index(animeListCode[startJp:], japaneseEndPosition)
 	m.JapaneseName = bytes.TrimSpace(animeListCode[startJp+len(japaneseStartPosition) : startJp+endJp])
@@ -157,39 +155,3 @@ func GetMangaStatus(m *types.Manga) error {
 	m.Status = strings.TrimSpace(string(animeListCode)[startSt+len(statusStartPosition) : startSt+endSt])
 	return nil
 }
-
-// chromeDriver := webdriver.NewChromeDriver("./chromedriver")
-// err := chromeDriver.Start()
-// if err != nil {
-// 	log.Println(err)
-// }
-// defer chromeDriver.Stop()
-// desired := webdriver.Capabilities{"Plataform": "Linux"}
-// required := webdriver.Capabilities{}
-// session, err := chromeDriver.NewSession(desired, required)
-// if err != nil {
-// 	log.Println(err)
-// }
-// defer session.Delete()
-// idManga := strconv.Itoa(m.ID)
-// err = session.Url("https://myanimelist.net/manga/" + url.QueryEscape(idManga))
-// if err != nil {
-// 	log.Println(err)
-// }
-// mangaDetailsBytes, err := session.ExecuteScript(`return Array.from(document.querySelectorAll(".dark_text")).map(el=>el.parentNode.innerText)`, []interface{}{})
-// if err != nil {
-// 	log.Println(err)
-// }
-// var mangaDetails []string
-// err = json.Unmarshal(mangaDetailsBytes, &mangaDetails)
-// if err != nil {
-// 	log.Println(err)
-// }
-// for _, ssData := range mangaDetails {
-// 	if strings.HasPrefix(ssData, "Status: ") == true {
-// 		m.Status = ssData
-// 	}
-// 	if strings.HasPrefix(ssData, "Japanese: ") == true {
-// 		m.JapaneseName = ssData
-// 	}
-// }

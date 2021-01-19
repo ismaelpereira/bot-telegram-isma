@@ -18,9 +18,15 @@ func main() {
 }
 
 func run() error {
-	bot, err := tgbotapi.NewBotAPI(config.GetTelegramKey())
+	telegramPath, err := config.GetTelegramKey()
 	if err != nil {
 		log.Println(err)
+		return err
+	}
+	bot, err := tgbotapi.NewBotAPI(telegramPath)
+	if err != nil {
+		log.Println(err)
+		return err
 	}
 	u := tgbotapi.NewUpdate(0)
 	updates, err := bot.GetUpdatesChan(u)
@@ -46,6 +52,7 @@ func handleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 				_, err := bot.Send(msg)
 				if err != nil {
 					log.Println(err)
+					return err
 				}
 
 			}
@@ -54,6 +61,7 @@ func handleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 				err := controllers.AdmiralHandleUpdate(bot, update)
 				if err != nil {
 					log.Println(err)
+					return err
 				}
 
 			}
@@ -62,6 +70,7 @@ func handleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 				err := controllers.AnimeHandleUpdate(bot, update)
 				if err != nil {
 					log.Println(err)
+					return err
 				}
 			}
 		case "manga":
@@ -69,6 +78,7 @@ func handleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 				err := controllers.MangaHandleUpdate(bot, update)
 				if err != nil {
 					log.Println(err)
+					return err
 				}
 			}
 		default:
@@ -80,7 +90,6 @@ func handleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 				}
 
 			}
-
 		}
 	}
 	return nil

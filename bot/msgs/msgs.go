@@ -1,7 +1,7 @@
 package msgs
 
 import (
-	"encoding/json"
+	"bytes"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/IsmaelPereira/telegram-bot-isma/types"
-	"github.com/fedesog/webdriver"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
@@ -58,7 +57,7 @@ func GetAdmiralPictureAndSendMessage(ad types.Admiral, update *tgbotapi.Update, 
 	}
 
 	adMessage := tgbotapi.NewPhotoUpload(update.Message.Chat.ID, tgbotapi.FileBytes{Bytes: adPictureData})
-	adMessage.Caption = "Nome real: " + ad.RealName + "\nNome de almirante: " + ad.AdmiralName + "\nIdade: " + strconv.Itoa(ad.Age) + "\nData de nascimento: " + ad.BirthDate + "\nSigno: " + ad.Sign + "\nAltura: " + strconv.FormatFloat(ad.Height, 'f', 2, 64) + "\nAkuma no Mi: " + ad.AkumaNoMi + "\nAnimal: " + ad.Animal + "\nPoder: " + ad.Power + "\nInspirado em:" + ad.ActorWhoInspire
+	adMessage.Caption = "Nome real: " + ad.RealName + "\nNome de almirante: " + ad.AdmiralName + "\nIdade: " + strconv.Itoa(ad.Age) + "\nData de nascimento: " + ad.BirthDate + "\nSigno: " + ad.Sign + "\nAltura: " + strconv.FormatFloat(ad.Height, 'f', 2, 64) + "\nAkuma no Mi: " + ad.AkumaNoMi + "\nAnimal: " + ad.Animal + "\nPoder: " + ad.Power + "\nInspirado em: " + ad.ActorWhoInspire
 	_, err = bot.Send(adMessage)
 	if err != nil {
 		log.Println(err)
@@ -119,7 +118,10 @@ func GetMangaPictureAndSendMessage(m types.Manga, update *tgbotapi.Update, bot *
 		chaptersNumber = "?"
 	}
 	GetMangaStatus(&m)
-	mMessage.Caption = "Título: " + m.Title + "\n" + m.JapaneseName + "\nNota: " + strconv.FormatFloat(m.Score, 'f', 2, 64) + "\nVolumes: " + volumesNumber + "\nCapítulos: " + chaptersNumber + "\n" + m.Status
+	if err != nil {
+		log.Println(err)
+	}
+	mMessage.Caption = "Título: " + m.Title + "\nNome Japonês: " + string(m.JapaneseName) + "\nNota: " + strconv.FormatFloat(m.Score, 'f', 2, 64) + "\nVolumes: " + volumesNumber + "\nCapítulos: " + chaptersNumber + "\nStatus: " + m.Status
 	_, err = bot.Send(mMessage)
 	if err != nil {
 		log.Println(err)
@@ -127,41 +129,67 @@ func GetMangaPictureAndSendMessage(m types.Manga, update *tgbotapi.Update, bot *
 }
 
 //GetMangaStatus is a function for get the required manga in MAL site
-func GetMangaStatus(m *types.Manga) {
-	chromeDriver := webdriver.NewChromeDriver("./chromedriver")
-	err := chromeDriver.Start()
-	if err != nil {
-		log.Println(err)
-	}
-	defer chromeDriver.Stop()
-	desired := webdriver.Capabilities{"Plataform": "Linux"}
-	required := webdriver.Capabilities{}
-	session, err := chromeDriver.NewSession(desired, required)
-	if err != nil {
-		log.Println(err)
-	}
-	defer session.Delete()
+func GetMangaStatus(m *types.Manga) error {
 	idManga := strconv.Itoa(m.ID)
-	err = session.Url("https://myanimelist.net/manga/" + url.QueryEscape(idManga))
+	animeListURL, err := http.Get("https://myanimelist.net/manga/" + url.QueryEscape(idManga))
 	if err != nil {
 		log.Println(err)
+		return err
 	}
-	mangaDetailsBytes, err := session.ExecuteScript(`return Array.from(document.querySelectorAll(".dark_text")).map(el=>el.parentNode.innerText)`, []interface{}{})
+	defer animeListURL.Body.Close()
+	animeListCode, err := ioutil.ReadAll(animeListURL.Body)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
-	var mangaDetails []string
-	err = json.Unmarshal(mangaDetailsBytes, &mangaDetails)
-	if err != nil {
-		log.Println(err)
-	}
-	for _, ssData := range mangaDetails {
-		if strings.HasPrefix(ssData, "Status: ") == true {
-			m.Status = ssData
-		}
-		if strings.HasPrefix(ssData, "Japanese: ") == true {
-			m.JapaneseName = ssData
-		}
-	}
+	japaneseStartPosition := []byte("Japanese:</span>")
+	japaneseEndPosition := []byte("</div>")
+	// statusStartPosition := string("Status:</span>")
+	// statusEndPosition := string("</div>")
+	startJp := bytes.Index(animeListCode, japaneseStartPosition)
+	endJp := bytes.Index(animeListCode[startJp:], japaneseEndPosition)
+	m.JapaneseName = bytes.TrimSpace(animeListCode[startJp+len(japaneseStartPosition) : startJp+endJp])
 
+	statusStartPosition := string("Status:</span>")
+	statusEndPosition := string("</div>")
+	startSt := strings.Index(string(animeListCode), statusStartPosition)
+	endSt := strings.Index(string(animeListCode)[startSt:], statusEndPosition)
+	m.Status = strings.TrimSpace(string(animeListCode)[startSt+len(statusStartPosition) : startSt+endSt])
+	return nil
 }
+
+// chromeDriver := webdriver.NewChromeDriver("./chromedriver")
+// err := chromeDriver.Start()
+// if err != nil {
+// 	log.Println(err)
+// }
+// defer chromeDriver.Stop()
+// desired := webdriver.Capabilities{"Plataform": "Linux"}
+// required := webdriver.Capabilities{}
+// session, err := chromeDriver.NewSession(desired, required)
+// if err != nil {
+// 	log.Println(err)
+// }
+// defer session.Delete()
+// idManga := strconv.Itoa(m.ID)
+// err = session.Url("https://myanimelist.net/manga/" + url.QueryEscape(idManga))
+// if err != nil {
+// 	log.Println(err)
+// }
+// mangaDetailsBytes, err := session.ExecuteScript(`return Array.from(document.querySelectorAll(".dark_text")).map(el=>el.parentNode.innerText)`, []interface{}{})
+// if err != nil {
+// 	log.Println(err)
+// }
+// var mangaDetails []string
+// err = json.Unmarshal(mangaDetailsBytes, &mangaDetails)
+// if err != nil {
+// 	log.Println(err)
+// }
+// for _, ssData := range mangaDetails {
+// 	if strings.HasPrefix(ssData, "Status: ") == true {
+// 		m.Status = ssData
+// 	}
+// 	if strings.HasPrefix(ssData, "Japanese: ") == true {
+// 		m.JapaneseName = ssData
+// 	}
+// }

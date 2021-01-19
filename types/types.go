@@ -46,5 +46,5 @@ type Manga struct {
 	Score        float64
 	Status       string
 	CoverPicture string `json:"image_url"`
-	JapaneseName string
+	JapaneseName []byte
 }

@@ -28,10 +28,11 @@ const (
 	MsgNotAuthorized  = IconDevil + " -- Desculpe, você não tem permissão para isso"
 	MsgServerError    = IconSkull + " -- Desculpe, tem algo de errado comigo..."
 	MsgNotFound       = IconWarning + " -- Desculpe, não consegui encontrar isso"
-	MsgHelp           = IconThumbsUp + " -- Os comandos são:\n/admiral\n/anime\n/manga\n"
+	MsgHelp           = IconThumbsUp + " -- Os comandos são:\n/admiral\n/anime\n/manga\n/money"
 	MsgAdmiral        = IconWarning + " -- The Admiral command is /admiral <admiral name> "
 	MsgAnime          = IconWarning + " -- O comando é /anime <nome do anime>\nO resultado é baseado em uma pesquisa no MyanimeList"
 	MsgManga          = IconWarning + " -- O comando é /manga <nome do mangá>\nO resultado é baseado em uma pesquisa no MyanimeList"
+	MsgMoney          = IconWarning + "-- O comando é /money <quantidade> <moeda principal> <moeda a ser convertida>"
 )
 
 //GetAdmiralPictureAndSendMessage is a function for admiral controller

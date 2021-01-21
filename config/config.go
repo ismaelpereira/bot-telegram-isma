@@ -10,7 +10,7 @@ import (
 type Config struct {
 	Telegram    TelegramKey `json:"telegram"`
 	AdmiralPath AdmiralPath `json:"admiral"`
-	StoragePath Storage     `json:"storage"`
+	AcessKey    MoneyAPI    `json:"moneyAPI"`
 }
 
 type TelegramKey struct {
@@ -21,8 +21,8 @@ type AdmiralPath struct {
 	Path string `json:"path"`
 }
 
-type Storage struct {
-	Path string `json:"path"`
+type MoneyAPI struct {
+	Key string `json:"accessKey"`
 }
 
 func GetAdmiralPath() (string, error) {
@@ -65,7 +65,7 @@ func GetTelegramKey() (string, error) {
 	return telegramKey, err
 }
 
-func GetStoragePath() (string, error) {
+func GetApiKey() (string, error) {
 	file, err := os.Open(os.Args[1])
 	if err != nil {
 		log.Println(err)
@@ -83,6 +83,6 @@ func GetStoragePath() (string, error) {
 		log.Println(err)
 		return "", err
 	}
-	storagePath := configDecoded.StoragePath.Path
-	return storagePath, err
+	accessKey := configDecoded.AcessKey.Key
+	return accessKey, err
 }

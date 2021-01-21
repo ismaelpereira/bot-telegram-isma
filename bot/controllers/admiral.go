@@ -10,7 +10,6 @@ import (
 	"github.com/IsmaelPereira/telegram-bot-isma/bot/msgs"
 	"github.com/IsmaelPereira/telegram-bot-isma/config"
 	"github.com/IsmaelPereira/telegram-bot-isma/types"
-	"github.com/davecgh/go-spew/spew"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
@@ -19,7 +18,6 @@ func AdmiralHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	admiralName := strings.TrimSpace(update.Message.CommandArguments())
 	if admiralName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAdmiral)
-		spew.Dump(update.Message.Chat.ID)
 		_, err := bot.Send(msg)
 		if err != nil {
 			return err
@@ -49,7 +47,7 @@ func AdmiralHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	}
 
 	for _, admiral := range admiralDecoded {
-		if strings.EqualFold(admiral.AdmiralName, admiralName) == true || strings.EqualFold(admiral.RealName, admiralName) == true {
+		if strings.EqualFold(admiral.AdmiralName, admiralName) || strings.EqualFold(admiral.RealName, admiralName) {
 			msgs.GetAdmiralPictureAndSendMessage(admiral, update, bot)
 		}
 	}

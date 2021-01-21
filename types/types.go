@@ -48,3 +48,11 @@ type Manga struct {
 	CoverPicture string `json:"image_url"`
 	JapaneseName []byte
 }
+
+type MoneySearchResult struct {
+	Success   bool   `json:"sucess"`
+	Timestamp int64  `json:"timestamp"`
+	Base      string `json:"base"`
+	Date      string `json:"date"`
+	Rates     map[string]float64
+}

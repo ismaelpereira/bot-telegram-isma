@@ -81,6 +81,14 @@ func handleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 					return err
 				}
 			}
+		case "money":
+			{
+				err := controllers.MoneyHandleUpdate(bot, update)
+				if err != nil {
+					log.Println(err)
+					return err
+				}
+			}
 		default:
 			{
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgCantUnderstand)

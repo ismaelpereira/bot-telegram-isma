@@ -56,3 +56,36 @@ type MoneySearchResult struct {
 	Date      string `json:"date"`
 	Rates     map[string]float64
 }
+
+type MovieResponse struct {
+	Page    int
+	Results []MovieDbSearchResults
+}
+
+type MovieDbSearchResults struct {
+	ID            int
+	Title         string
+	OriginalTitle string  `json:"original_title"`
+	ReleaseDate   string  `json:"release_date"`
+	PosterPath    string  `json:"poster_path"`
+	Popularity    float64 `json:"popularity"`
+}
+
+type WatchProvidersResponse struct {
+	ID      int
+	Results map[string]*CountryOptions
+}
+
+type CountryOptions struct {
+	Link     string
+	Rent     []*ProviderDetails
+	Buy      []*ProviderDetails
+	Flatrate []*ProviderDetails
+}
+
+type ProviderDetails struct {
+	DisplayPriority int    `json:"display_priority"`
+	LogoPath        string `json:"logo_path"`
+	ProviderID      int    `json:"provider_id"`
+	ProviderName    string `json:"provider_name"`
+}

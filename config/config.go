@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	Telegram    TelegramKey `json:"telegram"`
-	AdmiralPath AdmiralPath `json:"admiral"`
-	AcessKey    MoneyAPI    `json:"moneyAPI"`
+	Telegram      TelegramKey `json:"telegram"`
+	AdmiralPath   AdmiralPath `json:"admiral"`
+	MoneyAcessKey MoneyAPI    `json:"moneyAPI"`
+	MovieAcessKey MovieAPI    `json:"movieAPI"`
 }
 
 type TelegramKey struct {
@@ -23,6 +24,10 @@ type AdmiralPath struct {
 
 type MoneyAPI struct {
 	Key string `json:"accessKey"`
+}
+
+type MovieAPI struct {
+	Key string `json:"acessKey"`
 }
 
 func GetAdmiralPath() (string, error) {
@@ -65,7 +70,7 @@ func GetTelegramKey() (string, error) {
 	return telegramKey, err
 }
 
-func GetApiKey() (string, error) {
+func GetMoneyApiKey() (string, error) {
 	file, err := os.Open(os.Args[1])
 	if err != nil {
 		log.Println(err)
@@ -83,6 +88,28 @@ func GetApiKey() (string, error) {
 		log.Println(err)
 		return "", err
 	}
-	accessKey := configDecoded.AcessKey.Key
+	accessKey := configDecoded.MoneyAcessKey.Key
 	return accessKey, err
+}
+
+func GetMovieApiKey() (string, error) {
+	file, err := os.Open(os.Args[1])
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	defer file.Close()
+	configEncoded, err := ioutil.ReadAll(file)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	var configDecoded Config
+	err = json.Unmarshal(configEncoded, &configDecoded)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	acessKey := configDecoded.MovieAcessKey.Key
+	return acessKey, err
 }

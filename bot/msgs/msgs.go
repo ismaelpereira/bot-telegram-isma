@@ -2,6 +2,7 @@ package msgs
 
 import (
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/IsmaelPereira/telegram-bot-isma/config"
 	"github.com/IsmaelPereira/telegram-bot-isma/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
@@ -28,11 +30,12 @@ const (
 	MsgNotAuthorized  = IconDevil + " -- Desculpe, você não tem permissão para isso"
 	MsgServerError    = IconSkull + " -- Desculpe, tem algo de errado comigo..."
 	MsgNotFound       = IconWarning + " -- Desculpe, não consegui encontrar isso"
-	MsgHelp           = IconThumbsUp + " -- Os comandos são:\n/admiral\n/anime\n/manga\n/money"
+	MsgHelp           = IconThumbsUp + " -- Os comandos são:\n/admiral\n/anime\n/manga\n/money\n/movie"
 	MsgAdmiral        = IconWarning + " -- The Admiral command is /admiral <admiral name> "
 	MsgAnime          = IconWarning + " -- O comando é /anime <nome do anime>\nO resultado é baseado em uma pesquisa no MyanimeList"
 	MsgManga          = IconWarning + " -- O comando é /manga <nome do mangá>\nO resultado é baseado em uma pesquisa no MyanimeList"
 	MsgMoney          = IconWarning + "-- O comando é /money <quantidade> <moeda principal> <moeda a ser convertida>"
+	MsgMovie          = IconWarning + "-- O comando é /movie <nome do filme> O resultado é baseado em uma pesquisa do MovieDB"
 )
 
 //GetAdmiralPictureAndSendMessage is a function for admiral controller
@@ -154,5 +157,71 @@ func GetMangaStatus(m *types.Manga) error {
 	startSt := strings.Index(string(animeListCode), statusStartPosition)
 	endSt := strings.Index(string(animeListCode)[startSt:], statusEndPosition)
 	m.Status = strings.TrimSpace(string(animeListCode)[startSt+len(statusStartPosition) : startSt+endSt])
-	return nil
+	return err
+}
+
+func GetMoviePictureAndSendMessage(mov types.MovieDbSearchResults, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
+	var movDetailsMessage []string
+	movDetailsMessage = append(movDetailsMessage,
+		"\nTítulo: "+mov.Title,
+		"\nTítulo Original: "+mov.OriginalTitle,
+		"\nPopularidade: "+strconv.FormatFloat(mov.Popularity, 'f', 2, 64),
+		"\nData de lançamento: "+mov.ReleaseDate,
+	)
+	movPicture, err := http.Get("https://themoviedb.org/t/p/w300_and_h450_bestv2" + mov.PosterPath)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer movPicture.Body.Close()
+	movPictureData, err := ioutil.ReadAll(movPicture.Body)
+	movieProvidersMessage, err := GetMovieProviders(mov)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	movMessage := tgbotapi.NewPhotoUpload(update.Message.Chat.ID, tgbotapi.FileBytes{Bytes: movPictureData})
+	movMessage.Caption = strings.Join(movDetailsMessage, "") + strings.Join(movieProvidersMessage, "")
+	_, err = bot.Send(movMessage)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return err
+}
+
+func GetMovieProviders(mov types.MovieDbSearchResults) (movProvidersMessage []string, err error) {
+	apiKey, err := config.GetMovieApiKey()
+	if err != nil {
+		log.Println(err)
+
+	}
+	watchProviders, err := http.Get("https://api.themoviedb.org/3/movie/" + url.QueryEscape(strconv.Itoa(mov.ID)) + "/watch/providers?api_key=" + url.QueryEscape(apiKey))
+	defer watchProviders.Body.Close()
+	providersValues, err := ioutil.ReadAll(watchProviders.Body)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	var providers types.WatchProvidersResponse
+	err = json.Unmarshal(providersValues, &providers)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	if country, ok := providers.Results["BR"]; ok && country != nil {
+		movProvidersMessage = append(movProvidersMessage, "\nPara Comprar: ")
+		for _, providerBuy := range country.Buy {
+			movProvidersMessage = append(movProvidersMessage, providerBuy.ProviderName+",")
+		}
+		movProvidersMessage = append(movProvidersMessage, "\nPara Alugar: ")
+		for _, providerRent := range country.Rent {
+			movProvidersMessage = append(movProvidersMessage, providerRent.ProviderName+",")
+		}
+		movProvidersMessage = append(movProvidersMessage, "\nServicos de streaming: ")
+		for _, providerFlatrate := range country.Flatrate {
+			movProvidersMessage = append(movProvidersMessage, providerFlatrate.ProviderName+",")
+		}
+	}
+	return movProvidersMessage, err
 }

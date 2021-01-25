@@ -49,7 +49,7 @@ func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		moneyAPI = temp.(*types.MoneySearchResult)
 	}
 	if moneyAPI == nil {
-		apiKey, err := config.GetApiKey()
+		apiKey, err := config.GetMoneyApiKey()
 		if err != nil {
 			log.Println(err)
 			return err

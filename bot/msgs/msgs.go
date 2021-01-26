@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/IsmaelPereira/telegram-bot-isma/config"
 	"github.com/IsmaelPereira/telegram-bot-isma/types"
@@ -162,11 +163,16 @@ func GetMangaStatus(m *types.Manga) error {
 
 func GetMoviePictureAndSendMessage(mov types.MovieDbSearchResults, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
 	var movDetailsMessage []string
+	releaseDate, err := time.Parse("2006-01-02", mov.ReleaseDate)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
 	movDetailsMessage = append(movDetailsMessage,
 		"\nTítulo: "+mov.Title,
 		"\nTítulo Original: "+mov.OriginalTitle,
 		"\nPopularidade: "+strconv.FormatFloat(mov.Popularity, 'f', 2, 64),
-		"\nData de lançamento: "+mov.ReleaseDate,
+		"\nData de lançamento: "+releaseDate.Format("02/01/2006"),
 	)
 	movPicture, err := http.Get("https://themoviedb.org/t/p/w300_and_h450_bestv2" + mov.PosterPath)
 	if err != nil {
@@ -211,16 +217,32 @@ func GetMovieProviders(mov types.MovieDbSearchResults) (movProvidersMessage []st
 	}
 	if country, ok := providers.Results["BR"]; ok && country != nil {
 		movProvidersMessage = append(movProvidersMessage, "\nPara Comprar: ")
-		for _, providerBuy := range country.Buy {
-			movProvidersMessage = append(movProvidersMessage, providerBuy.ProviderName+",")
+		for i, providerBuy := range country.Buy {
+			movProvidersMessage = append(movProvidersMessage, providerBuy.ProviderName)
+			if i == len(country.Buy)-1 {
+				movProvidersMessage = append(movProvidersMessage, ".")
+			} else {
+				movProvidersMessage = append(movProvidersMessage, ", ")
+			}
 		}
+
 		movProvidersMessage = append(movProvidersMessage, "\nPara Alugar: ")
-		for _, providerRent := range country.Rent {
-			movProvidersMessage = append(movProvidersMessage, providerRent.ProviderName+",")
+		for i, providerRent := range country.Rent {
+			movProvidersMessage = append(movProvidersMessage, providerRent.ProviderName)
+			if i == len(country.Rent)-1 {
+				movProvidersMessage = append(movProvidersMessage, ".")
+			} else {
+				movProvidersMessage = append(movProvidersMessage, ", ")
+			}
 		}
 		movProvidersMessage = append(movProvidersMessage, "\nServicos de streaming: ")
-		for _, providerFlatrate := range country.Flatrate {
-			movProvidersMessage = append(movProvidersMessage, providerFlatrate.ProviderName+",")
+		for i, providerFlatrate := range country.Flatrate {
+			movProvidersMessage = append(movProvidersMessage, providerFlatrate.ProviderName)
+			if i == len(country.Flatrate)-1 {
+				movProvidersMessage = append(movProvidersMessage, ".")
+			} else {
+				movProvidersMessage = append(movProvidersMessage, ", ")
+			}
 		}
 	}
 	return movProvidersMessage, err

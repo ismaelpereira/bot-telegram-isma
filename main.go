@@ -14,7 +14,6 @@ func main() {
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}
-
 }
 
 func run() error {
@@ -40,6 +39,9 @@ func run() error {
 }
 
 func handleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+	if update.CallbackQuery != nil {
+		controllers.MovieHandleUpdate(bot, update)
+	}
 	if update.Message == nil {
 		return nil
 	}
@@ -104,7 +106,6 @@ func handleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 				if err != nil {
 					log.Println(err)
 				}
-
 			}
 		}
 	}

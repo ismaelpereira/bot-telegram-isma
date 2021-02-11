@@ -25,7 +25,8 @@ func AnimeHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 
 		return nil
 	}
-	apiResult, err := http.Get("https://api.jikan.moe/v3/search/anime?q=" + url.QueryEscape(animeName) + "&page=1&limit=3")
+	apiResult, err := http.Get("https://api.jikan.moe/v3/search/anime?q=" + url.QueryEscape(animeName) +
+		"&page=1&limit=3")
 	if err != nil {
 		log.Println(err)
 		return err

@@ -1,5 +1,9 @@
 package types
 
+import (
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+)
+
 type Admiral struct {
 	RealName        string
 	AdmiralName     string
@@ -88,4 +92,17 @@ type ProviderDetails struct {
 	LogoPath        string `json:"logo_path"`
 	ProviderID      int    `json:"provider_id"`
 	ProviderName    string `json:"provider_name"`
+}
+
+type EditMediaJSON struct {
+	ChatID      int64                         `json:"chat_id"`
+	MessageID   int                           `json:"message_id"`
+	Media       Media                         `json:"media"`
+	ReplyMarkup tgbotapi.InlineKeyboardMarkup `json:"reply_markup"`
+}
+
+type Media struct {
+	Type    string `json:"type"`
+	URL     string `json:"media"`
+	Caption string `json:"caption"`
 }

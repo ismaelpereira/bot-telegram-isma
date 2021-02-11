@@ -25,6 +25,8 @@ const (
 	IconSkull         = "💀"
 	IconWarning       = "⚠"
 	IconAlarmClock    = "⏰"
+	IconPrevious      = "⇦"
+	IconNext          = "⇨"
 
 	MsgThumbsUp       = IconThumbsUp
 	MsgCantUnderstand = IconX + " -- Desculpe, não entendi"
@@ -62,7 +64,11 @@ func GetAdmiralPictureAndSendMessage(ad types.Admiral, update *tgbotapi.Update, 
 	}
 
 	adMessage := tgbotapi.NewPhotoUpload(update.Message.Chat.ID, tgbotapi.FileBytes{Bytes: adPictureData})
-	adMessage.Caption = "Nome real: " + ad.RealName + "\nNome de almirante: " + ad.AdmiralName + "\nIdade: " + strconv.Itoa(ad.Age) + "\nData de nascimento: " + ad.BirthDate + "\nSigno: " + ad.Sign + "\nAltura: " + strconv.FormatFloat(ad.Height, 'f', 2, 64) + "\nAkuma no Mi: " + ad.AkumaNoMi + "\nAnimal: " + ad.Animal + "\nPoder: " + ad.Power + "\nInspirado em: " + ad.ActorWhoInspire
+	adMessage.Caption = "Nome real: " + ad.RealName + "\nNome de almirante: " +
+		ad.AdmiralName + "\nIdade: " + strconv.Itoa(ad.Age) + "\nData de nascimento: " +
+		ad.BirthDate + "\nSigno: " + ad.Sign + "\nAltura: " + strconv.FormatFloat(ad.Height, 'f', 2, 64) +
+		"\nAkuma no Mi: " + ad.AkumaNoMi + "\nAnimal: " + ad.Animal + "\nPoder: " + ad.Power + "\nInspirado em: " +
+		ad.ActorWhoInspire
 	_, err = bot.Send(adMessage)
 	if err != nil {
 		log.Println(err)
@@ -93,7 +99,8 @@ func GetAnimePictureAndSendMessage(an types.Anime, update *tgbotapi.Update, bot 
 	if animeEpisodes == "0" {
 		animeEpisodes = "?"
 	}
-	anMessage.Caption = "Título: " + an.Title + "\nNota: " + strconv.FormatFloat(an.Score, 'f', 2, 64) + "\nEpisódios: " + animeEpisodes + "\nPassando? " + airing
+	anMessage.Caption = "Título: " + an.Title + "\nNota: " + strconv.FormatFloat(an.Score, 'f', 2, 64) +
+		"\nEpisódios: " + animeEpisodes + "\nPassando? " + airing
 	_, err = bot.Send(anMessage)
 	if err != nil {
 		log.Println(err)
@@ -126,7 +133,9 @@ func GetMangaPictureAndSendMessage(m types.Manga, update *tgbotapi.Update, bot *
 	if err != nil {
 		log.Println(err)
 	}
-	mMessage.Caption = "Título: " + m.Title + "\nNome Japonês: " + string(m.JapaneseName) + "\nNota: " + strconv.FormatFloat(m.Score, 'f', 2, 64) + "\nVolumes: " + volumesNumber + "\nCapítulos: " + chaptersNumber + "\nStatus: " + m.Status
+	mMessage.Caption = "Título: " + m.Title + "\nNome Japonês: " + string(m.JapaneseName) + "\nNota: " +
+		strconv.FormatFloat(m.Score, 'f', 2, 64) + "\nVolumes: " + volumesNumber + "\nCapítulos: " + chaptersNumber +
+		"\nStatus: " + m.Status
 	_, err = bot.Send(mMessage)
 	if err != nil {
 		log.Println(err)
@@ -161,12 +170,12 @@ func GetMangaStatus(m *types.Manga) error {
 	return err
 }
 
-func GetMoviePictureAndSendMessage(mov types.MovieDbSearchResults, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
+func GetMoviePictureAndSendMessage(mov types.MovieDbSearchResults, update *tgbotapi.Update, bot *tgbotapi.BotAPI) (*tgbotapi.PhotoConfig, error) {
 	var movDetailsMessage []string
 	releaseDate, err := time.Parse("2006-01-02", mov.ReleaseDate)
 	if err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
 	movDetailsMessage = append(movDetailsMessage,
 		"\nTítulo: "+mov.Title,
@@ -177,32 +186,34 @@ func GetMoviePictureAndSendMessage(mov types.MovieDbSearchResults, update *tgbot
 	movPicture, err := http.Get("https://themoviedb.org/t/p/w300_and_h450_bestv2" + mov.PosterPath)
 	if err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
 	defer movPicture.Body.Close()
 	movPictureData, err := ioutil.ReadAll(movPicture.Body)
 	movieProvidersMessage, err := GetMovieProviders(mov)
 	if err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
-	movMessage := tgbotapi.NewPhotoUpload(update.Message.Chat.ID, tgbotapi.FileBytes{Bytes: movPictureData})
+	var movMessage tgbotapi.PhotoConfig
+	if update.CallbackQuery == nil {
+		movMessage = tgbotapi.NewPhotoUpload(update.Message.Chat.ID, tgbotapi.FileBytes{Bytes: movPictureData})
+	}
+	if update.CallbackQuery != nil {
+		movMessage = tgbotapi.NewPhotoUpload(update.CallbackQuery.Message.Chat.ID, tgbotapi.FileBytes{Bytes: movPictureData})
+	}
 	movMessage.Caption = strings.Join(movDetailsMessage, "") + strings.Join(movieProvidersMessage, "")
-	_, err = bot.Send(movMessage)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return err
+	return &movMessage, nil
 }
-
 func GetMovieProviders(mov types.MovieDbSearchResults) (movProvidersMessage []string, err error) {
 	apiKey, err := config.GetMovieApiKey()
 	if err != nil {
 		log.Println(err)
 
 	}
-	watchProviders, err := http.Get("https://api.themoviedb.org/3/movie/" + url.QueryEscape(strconv.Itoa(mov.ID)) + "/watch/providers?api_key=" + url.QueryEscape(apiKey))
+	watchProviders, err := http.Get("https://api.themoviedb.org/3/movie/" +
+		url.QueryEscape(strconv.Itoa(mov.ID)) + "/watch/providers?api_key=" +
+		url.QueryEscape(apiKey))
 	defer watchProviders.Body.Close()
 	providersValues, err := ioutil.ReadAll(watchProviders.Body)
 	if err != nil {
@@ -216,32 +227,39 @@ func GetMovieProviders(mov types.MovieDbSearchResults) (movProvidersMessage []st
 		return nil, err
 	}
 	if country, ok := providers.Results["BR"]; ok && country != nil {
-		movProvidersMessage = append(movProvidersMessage, "\nPara Comprar: ")
-		for i, providerBuy := range country.Buy {
-			movProvidersMessage = append(movProvidersMessage, providerBuy.ProviderName)
-			if i == len(country.Buy)-1 {
-				movProvidersMessage = append(movProvidersMessage, ".")
-			} else {
-				movProvidersMessage = append(movProvidersMessage, ", ")
+		if country.Buy != nil {
+			movProvidersMessage = append(movProvidersMessage, "\nPara Comprar: ")
+			for i, providerBuy := range country.Buy {
+				movProvidersMessage = append(movProvidersMessage, providerBuy.ProviderName)
+				if i == len(country.Buy)-1 {
+					movProvidersMessage = append(movProvidersMessage, ".")
+				} else {
+					movProvidersMessage = append(movProvidersMessage, ", ")
+				}
 			}
 		}
 
-		movProvidersMessage = append(movProvidersMessage, "\nPara Alugar: ")
-		for i, providerRent := range country.Rent {
-			movProvidersMessage = append(movProvidersMessage, providerRent.ProviderName)
-			if i == len(country.Rent)-1 {
-				movProvidersMessage = append(movProvidersMessage, ".")
-			} else {
-				movProvidersMessage = append(movProvidersMessage, ", ")
+		if country.Rent != nil {
+			movProvidersMessage = append(movProvidersMessage, "\nPara Alugar: ")
+			for i, providerRent := range country.Rent {
+				movProvidersMessage = append(movProvidersMessage, providerRent.ProviderName)
+				if i == len(country.Rent)-1 {
+					movProvidersMessage = append(movProvidersMessage, ".")
+				} else {
+					movProvidersMessage = append(movProvidersMessage, ", ")
+				}
 			}
 		}
-		movProvidersMessage = append(movProvidersMessage, "\nServicos de streaming: ")
-		for i, providerFlatrate := range country.Flatrate {
-			movProvidersMessage = append(movProvidersMessage, providerFlatrate.ProviderName)
-			if i == len(country.Flatrate)-1 {
-				movProvidersMessage = append(movProvidersMessage, ".")
-			} else {
-				movProvidersMessage = append(movProvidersMessage, ", ")
+
+		if country.Flatrate != nil {
+			movProvidersMessage = append(movProvidersMessage, "\nServicos de streaming: ")
+			for i, providerFlatrate := range country.Flatrate {
+				movProvidersMessage = append(movProvidersMessage, providerFlatrate.ProviderName)
+				if i == len(country.Flatrate)-1 {
+					movProvidersMessage = append(movProvidersMessage, ".")
+				} else {
+					movProvidersMessage = append(movProvidersMessage, ", ")
+				}
 			}
 		}
 	}

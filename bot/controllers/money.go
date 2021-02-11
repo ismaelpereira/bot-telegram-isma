@@ -33,9 +33,12 @@ func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		return err
 	}
 	commandValue := commandSplit[0]
+	currencyToConvert := commandSplit[1]
+	currencyConverted := commandSplit[2]
 	amount, err := strconv.ParseFloat(commandValue, 64)
 	if err != nil {
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Parece que você digitou o comando errado, tente colocar espaços. Ex: '/money 1 usd brl")
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
+			"Parece que você digitou o comando errado, tente colocar espaços. Ex: '/money 1 usd brl")
 		bot.Send(msg)
 		if err != nil {
 			log.Println(err)
@@ -76,7 +79,8 @@ func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 
 	if strings.EqualFold(commandSplit[1], "EUR") {
 		currency := moneyAPI.Rates[commandSplit[2]] * amount
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, strconv.FormatFloat(currency, 'f', 2, 64))
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+
+			" to "+currencyConverted+" --> "+strconv.FormatFloat(currency, 'f', 2, 64))
 		_, err = bot.Send(msg)
 		if err != nil {
 			log.Println(err)
@@ -85,7 +89,8 @@ func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	}
 	if strings.EqualFold(commandSplit[2], "EUR") {
 		currency := (1 / moneyAPI.Rates[commandSplit[1]]) * amount
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, strconv.FormatFloat(currency, 'f', 2, 64))
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+
+			" to "+currencyConverted+" --> "+strconv.FormatFloat(currency, 'f', 2, 64))
 		_, err = bot.Send(msg)
 		if err != nil {
 			log.Println(err)
@@ -94,7 +99,8 @@ func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	}
 	if strings.EqualFold(commandSplit[1], "EUR") == false && strings.EqualFold(commandSplit[2], "EUR") == false {
 		currency := ((1 / moneyAPI.Rates[commandSplit[1]]) * moneyAPI.Rates[commandSplit[2]]) * amount
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, strconv.FormatFloat(currency, 'f', 2, 64))
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+
+			" to "+currencyConverted+" --> "+strconv.FormatFloat(currency, 'f', 2, 64))
 		_, err = bot.Send(msg)
 		if err != nil {
 			log.Println(err)

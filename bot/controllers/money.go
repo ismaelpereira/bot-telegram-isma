@@ -32,6 +32,16 @@ func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		}
 		return err
 	}
+	if len(commandSplit) != 3 {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
+			"Você digitou o comando errado. Não foi possível completar a solicitação")
+		_, err := bot.Send(msg)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		return err
+	}
 	commandValue := commandSplit[0]
 	currencyToConvert := commandSplit[1]
 	currencyConverted := commandSplit[2]

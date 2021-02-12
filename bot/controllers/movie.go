@@ -77,50 +77,48 @@ func MovieHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		}
 		return nil
 	}
-	if update.CallbackQuery != nil {
-		i, _ := strconv.Atoi(update.CallbackQuery.Data)
-		if v, ok := MovieMenu[update.CallbackQuery.Message.Chat.ID]; ok && len(v) != 0 {
-			movieMessage, err := msgs.GetMoviePictureAndSendMessage(v[i], update, bot)
-			if err != nil {
-				return err
-			}
-			var kb []tgbotapi.InlineKeyboardButton
-			if i != 0 {
-				kb = append(kb,
-					tgbotapi.NewInlineKeyboardButtonData(msgs.IconPrevious, strconv.Itoa(i-1)),
-				)
-			}
-			if i != (len(v) - 1) {
-				kb = append(kb,
-					tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, strconv.Itoa(i+1)),
-				)
-			}
-			var msgEdit types.EditMediaJSON
-			msgEdit.ChatID = update.CallbackQuery.Message.Chat.ID
-			msgEdit.MessageID = update.CallbackQuery.Message.MessageID
-			msgEdit.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-				kb,
+	i, _ := strconv.Atoi(update.CallbackQuery.Data)
+	if v, ok := MovieMenu[update.CallbackQuery.Message.Chat.ID]; ok && len(v) != 0 {
+		movieMessage, err := msgs.GetMoviePictureAndSendMessage(v[i], update, bot)
+		if err != nil {
+			return err
+		}
+		var kb []tgbotapi.InlineKeyboardButton
+		if i != 0 {
+			kb = append(kb,
+				tgbotapi.NewInlineKeyboardButtonData(msgs.IconPrevious, strconv.Itoa(i-1)),
 			)
-			msgEdit.Media.Caption = movieMessage.Caption
-			msgEdit.Media.Type = "photo"
-			msgEdit.Media.URL = "https://www.themoviedb.org/t/p/w300_and_h450_bestv2" + v[i].PosterPath
-			messageJSON, err := json.Marshal(msgEdit)
-			if err != nil {
-				return err
-			}
-			telegramKey, err := config.GetTelegramKey()
-			if err != nil {
-				return err
-			}
-			sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(telegramKey)+"/editMessageMedia", "application/json", bytes.NewBuffer(messageJSON))
-			if err != nil {
-				return err
-			}
+		}
+		if i != (len(v) - 1) {
+			kb = append(kb,
+				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, strconv.Itoa(i+1)),
+			)
+		}
+		var msgEdit types.EditMediaJSON
+		msgEdit.ChatID = update.CallbackQuery.Message.Chat.ID
+		msgEdit.MessageID = update.CallbackQuery.Message.MessageID
+		msgEdit.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+			kb,
+		)
+		msgEdit.Media.Caption = movieMessage.Caption
+		msgEdit.Media.Type = "photo"
+		msgEdit.Media.URL = "https://www.themoviedb.org/t/p/w300_and_h450_bestv2" + v[i].PosterPath
+		messageJSON, err := json.Marshal(msgEdit)
+		if err != nil {
+			return err
+		}
+		telegramKey, err := config.GetTelegramKey()
+		if err != nil {
+			return err
+		}
+		sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(telegramKey)+"/editMessageMedia", "application/json", bytes.NewBuffer(messageJSON))
+		if err != nil {
+			return err
+		}
 
-			if sendMessage.StatusCode > 299 && sendMessage.StatusCode < 200 {
-				err = fmt.Errorf("Error in post method %w", err)
-				return err
-			}
+		if sendMessage.StatusCode > 299 && sendMessage.StatusCode < 200 {
+			err = fmt.Errorf("Error in post method %w", err)
+			return err
 		}
 	}
 	return nil

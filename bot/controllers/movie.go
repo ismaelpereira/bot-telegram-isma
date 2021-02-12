@@ -48,24 +48,17 @@ func MovieHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 			return err
 		}
 		MovieMenu[update.Message.Chat.ID] = movieResults.Results
-		var i int
+
 		if v, ok := MovieMenu[update.Message.Chat.ID]; ok && len(v) != 0 {
-			movieMessage, err := msgs.GetMoviePictureAndSendMessage(v[i], update, bot)
+			movieMessage, err := msgs.GetMoviePictureAndSendMessage(v[0], update, bot)
 			if err != nil {
 				return err
 			}
 			var kb []tgbotapi.InlineKeyboardMarkup
-			if i != 0 {
+			if len(v) > 1 {
 				kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
 					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData(msgs.IconPrevious, strconv.Itoa(i-1)),
-					),
-				))
-			}
-			if i != len(v)-1 {
-				kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
-					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, strconv.Itoa(i+1)),
+						tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "1"),
 					),
 				))
 			}
@@ -77,7 +70,10 @@ func MovieHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		}
 		return nil
 	}
-	i, _ := strconv.Atoi(update.CallbackQuery.Data)
+	i, err := strconv.Atoi(update.CallbackQuery.Data)
+	if err != nil {
+		return err
+	}
 	if v, ok := MovieMenu[update.CallbackQuery.Message.Chat.ID]; ok && len(v) != 0 {
 		movieMessage, err := msgs.GetMoviePictureAndSendMessage(v[i], update, bot)
 		if err != nil {

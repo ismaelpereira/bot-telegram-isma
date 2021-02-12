@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/IsmaelPereira/telegram-bot-isma/bot/msgs"
@@ -36,7 +37,34 @@ func AnimeHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		return err
 	}
 	for _, anime := range searchResults.Results {
-		msgs.GetAnimePictureAndSendMessage(anime, update, bot)
+		getAnimePictureAndSendMessage(anime, update, bot)
 	}
 	return nil
+}
+
+func getAnimePictureAndSendMessage(an types.Anime, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
+	anPicture, err := http.Get(an.CoverPicture)
+	if err != nil {
+		return err
+	}
+	defer anPicture.Body.Close()
+	anPictureData, err := ioutil.ReadAll(anPicture.Body)
+	if err != nil {
+		return err
+	}
+	anMessage := tgbotapi.NewPhotoUpload(update.Message.Chat.ID, tgbotapi.FileBytes{Bytes: anPictureData})
+	var airing string
+	if an.Airing == true {
+		airing = "Sim"
+	} else {
+		airing = "Não"
+	}
+	animeEpisodes := strconv.Itoa(an.Episodes)
+	if animeEpisodes == "0" {
+		animeEpisodes = "?"
+	}
+	anMessage.Caption = "Título: " + an.Title + "\nNota: " + strconv.FormatFloat(an.Score, 'f', 2, 64) +
+		"\nEpisódios: " + animeEpisodes + "\nPassando? " + airing
+	_, err = bot.Send(anMessage)
+	return err
 }

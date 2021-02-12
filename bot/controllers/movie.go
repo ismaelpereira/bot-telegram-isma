@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/IsmaelPereira/telegram-bot-isma/bot/msgs"
 	"github.com/IsmaelPereira/telegram-bot-isma/config"
@@ -50,7 +51,7 @@ func MovieHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		MovieMenu[update.Message.Chat.ID] = movieResults.Results
 
 		if v, ok := MovieMenu[update.Message.Chat.ID]; ok && len(v) != 0 {
-			movieMessage, err := msgs.GetMoviePictureAndSendMessage(v[0], update, bot)
+			movieMessage, err := getMoviePictureAndSendMessage(v[0], update, bot)
 			if err != nil {
 				return err
 			}
@@ -75,7 +76,7 @@ func MovieHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		return err
 	}
 	if v, ok := MovieMenu[update.CallbackQuery.Message.Chat.ID]; ok && len(v) != 0 {
-		movieMessage, err := msgs.GetMoviePictureAndSendMessage(v[i], update, bot)
+		movieMessage, err := getMoviePictureAndSendMessage(v[i], update, bot)
 		if err != nil {
 			return err
 		}
@@ -118,4 +119,94 @@ func MovieHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		}
 	}
 	return nil
+}
+
+func getMoviePictureAndSendMessage(mov types.MovieDbSearchResults, update *tgbotapi.Update, bot *tgbotapi.BotAPI) (*tgbotapi.PhotoConfig, error) {
+	var movDetailsMessage []string
+	releaseDate, err := time.Parse("2006-01-02", mov.ReleaseDate)
+	if err != nil {
+		return nil, err
+	}
+	movDetailsMessage = append(movDetailsMessage,
+		"\nTítulo: "+mov.Title,
+		"\nTítulo Original: "+mov.OriginalTitle,
+		"\nPopularidade: "+strconv.FormatFloat(mov.Popularity, 'f', 2, 64),
+		"\nData de lançamento: "+releaseDate.Format("02/01/2006"),
+	)
+	movPicture, err := http.Get("https://themoviedb.org/t/p/w300_and_h450_bestv2" + mov.PosterPath)
+	if err != nil {
+		return nil, err
+	}
+	defer movPicture.Body.Close()
+	movPictureData, err := ioutil.ReadAll(movPicture.Body)
+	movieProvidersMessage, err := getMovieProviders(mov)
+	if err != nil {
+		return nil, err
+	}
+	var movMessage tgbotapi.PhotoConfig
+	if update.CallbackQuery == nil {
+		movMessage = tgbotapi.NewPhotoUpload(update.Message.Chat.ID, tgbotapi.FileBytes{Bytes: movPictureData})
+	}
+	if update.CallbackQuery != nil {
+		movMessage = tgbotapi.NewPhotoUpload(update.CallbackQuery.Message.Chat.ID, tgbotapi.FileBytes{Bytes: movPictureData})
+	}
+	movMessage.Caption = strings.Join(movDetailsMessage, "") + strings.Join(movieProvidersMessage, "")
+	return &movMessage, nil
+}
+func getMovieProviders(mov types.MovieDbSearchResults) (movProvidersMessage []string, err error) {
+	apiKey, err := config.GetMovieApiKey()
+	if err != nil {
+		return nil, err
+	}
+	watchProviders, err := http.Get("https://api.themoviedb.org/3/movie/" +
+		url.QueryEscape(strconv.Itoa(mov.ID)) + "/watch/providers?api_key=" +
+		url.QueryEscape(apiKey))
+	providersValues, err := ioutil.ReadAll(watchProviders.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer watchProviders.Body.Close()
+	var providers types.WatchProvidersResponse
+	err = json.Unmarshal(providersValues, &providers)
+	if err != nil {
+		return nil, err
+	}
+	if country, ok := providers.Results["BR"]; ok && country != nil {
+		if country.Buy != nil {
+			movProvidersMessage = append(movProvidersMessage, "\nPara Comprar: ")
+			for i, providerBuy := range country.Buy {
+				movProvidersMessage = append(movProvidersMessage, providerBuy.ProviderName)
+				if i == len(country.Buy)-1 {
+					movProvidersMessage = append(movProvidersMessage, ".")
+				} else {
+					movProvidersMessage = append(movProvidersMessage, ", ")
+				}
+			}
+		}
+
+		if country.Rent != nil {
+			movProvidersMessage = append(movProvidersMessage, "\nPara Alugar: ")
+			for i, providerRent := range country.Rent {
+				movProvidersMessage = append(movProvidersMessage, providerRent.ProviderName)
+				if i == len(country.Rent)-1 {
+					movProvidersMessage = append(movProvidersMessage, ".")
+				} else {
+					movProvidersMessage = append(movProvidersMessage, ", ")
+				}
+			}
+		}
+
+		if country.Flatrate != nil {
+			movProvidersMessage = append(movProvidersMessage, "\nServicos de streaming: ")
+			for i, providerFlatrate := range country.Flatrate {
+				movProvidersMessage = append(movProvidersMessage, providerFlatrate.ProviderName)
+				if i == len(country.Flatrate)-1 {
+					movProvidersMessage = append(movProvidersMessage, ".")
+				} else {
+					movProvidersMessage = append(movProvidersMessage, ", ")
+				}
+			}
+		}
+	}
+	return movProvidersMessage, err
 }

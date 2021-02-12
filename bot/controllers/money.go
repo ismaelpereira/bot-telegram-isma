@@ -23,7 +23,6 @@ func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	command := strings.ToUpper(update.Message.CommandArguments())
 	commandSplit := strings.Fields(command)
 	if command == "" {
-
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgMoney)
 		_, err := bot.Send(msg)
 		if err != nil {
@@ -117,6 +116,5 @@ func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 			return err
 		}
 	}
-
 	return err
 }

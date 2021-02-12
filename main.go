@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/IsmaelPereira/telegram-bot-isma/bot/controllers"
-	"github.com/IsmaelPereira/telegram-bot-isma/bot/msgs"
 	"github.com/IsmaelPereira/telegram-bot-isma/config"
+	"github.com/IsmaelPereira/telegram-bot-isma/handler"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
@@ -46,67 +46,9 @@ func handleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		return nil
 	}
 	if update.Message.IsCommand() {
-		argument := update.Message.Command()
-		switch strings.ToLower(argument) {
-		case "help":
-			{
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgHelp)
-				_, err := bot.Send(msg)
-				if err != nil {
-					log.Println(err)
-					return err
-				}
-
-			}
-		case "admiral":
-			{
-				err := controllers.AdmiralHandleUpdate(bot, update)
-				if err != nil {
-					log.Println(err)
-					return err
-				}
-
-			}
-		case "anime":
-			{
-				err := controllers.AnimeHandleUpdate(bot, update)
-				if err != nil {
-					log.Println(err)
-					return err
-				}
-			}
-		case "manga":
-			{
-				err := controllers.MangaHandleUpdate(bot, update)
-				if err != nil {
-					log.Println(err)
-					return err
-				}
-			}
-		case "money":
-			{
-				err := controllers.MoneyHandleUpdate(bot, update)
-				if err != nil {
-					log.Println(err)
-					return err
-				}
-			}
-		case "movie":
-			{
-				err := controllers.MovieHandleUpdate(bot, update)
-				if err != nil {
-					log.Println(err)
-					return err
-				}
-			}
-		default:
-			{
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgCantUnderstand)
-				_, err := bot.Send(msg)
-				if err != nil {
-					log.Println(err)
-				}
-			}
+		err := handler.VerifyAndExecuteCommand(strings.ToLower(update.Message.Command()), bot, update)
+		if err != nil {
+			return err
 		}
 	}
 	return nil

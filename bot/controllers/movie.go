@@ -21,7 +21,6 @@ var MovieMenu = make(map[int64][]types.MovieDbSearchResults)
 
 func MovieHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	var movieResults types.MovieResponse
-
 	if update.CallbackQuery == nil {
 		movieName := strings.TrimSpace(update.Message.CommandArguments())
 		if movieName == "" {
@@ -52,9 +51,7 @@ func MovieHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 			log.Println(err)
 			return err
 		}
-
 		MovieMenu[update.Message.Chat.ID] = movieResults.Results
-
 		var i int
 		if v, ok := MovieMenu[update.Message.Chat.ID]; ok && len(v) != 0 {
 			movieMessage, err := msgs.GetMoviePictureAndSendMessage(v[i], update, bot)

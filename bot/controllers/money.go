@@ -39,7 +39,7 @@ func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	commandValue := commandSplit[0]
 	currencyToConvert := commandSplit[1]
 	currencyConverted := commandSplit[2]
-	if commandSplit[1] == commandSplit[2] {
+	if currencyToConvert == currencyConverted {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
 			commandValue+" "+currencyConverted+" to "+currencyConverted+" --> "+commandValue)
 		_, err := bot.Send(msg)

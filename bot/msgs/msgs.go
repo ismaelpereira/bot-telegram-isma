@@ -44,7 +44,6 @@ const (
 func GetAdmiralPictureAndSendMessage(ad types.Admiral, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
 	adPicture, err := http.Get(ad.ProfilePicture)
 	if err != nil {
-		return err
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, MsgServerError)
 		_, err := bot.Send(msg)
 		return err
@@ -66,7 +65,6 @@ func GetAdmiralPictureAndSendMessage(ad types.Admiral, update *tgbotapi.Update, 
 		ad.ActorWhoInspire
 	_, err = bot.Send(adMessage)
 	return err
-
 }
 
 //GetAnimePictureAndSendMessage is a function for anime controller
@@ -145,13 +143,12 @@ func GetMangaStatus(m *types.Manga) error {
 	startJp := bytes.Index(animeListCode, japaneseStartPosition)
 	endJp := bytes.Index(animeListCode[startJp:], japaneseEndPosition)
 	m.JapaneseName = bytes.TrimSpace(animeListCode[startJp+len(japaneseStartPosition) : startJp+endJp])
-
 	statusStartPosition := string("Status:</span>")
 	statusEndPosition := string("</div>")
 	startSt := strings.Index(string(animeListCode), statusStartPosition)
 	endSt := strings.Index(string(animeListCode)[startSt:], statusEndPosition)
 	m.Status = strings.TrimSpace(string(animeListCode)[startSt+len(statusStartPosition) : startSt+endSt])
-	return err
+	return nil
 }
 
 func GetMoviePictureAndSendMessage(mov types.MovieDbSearchResults, update *tgbotapi.Update, bot *tgbotapi.BotAPI) (*tgbotapi.PhotoConfig, error) {
@@ -189,16 +186,16 @@ func GetMoviePictureAndSendMessage(mov types.MovieDbSearchResults, update *tgbot
 func GetMovieProviders(mov types.MovieDbSearchResults) (movProvidersMessage []string, err error) {
 	apiKey, err := config.GetMovieApiKey()
 	if err != nil {
-
+		return nil, err
 	}
 	watchProviders, err := http.Get("https://api.themoviedb.org/3/movie/" +
 		url.QueryEscape(strconv.Itoa(mov.ID)) + "/watch/providers?api_key=" +
 		url.QueryEscape(apiKey))
-	defer watchProviders.Body.Close()
 	providersValues, err := ioutil.ReadAll(watchProviders.Body)
 	if err != nil {
 		return nil, err
 	}
+	defer watchProviders.Body.Close()
 	var providers types.WatchProvidersResponse
 	err = json.Unmarshal(providersValues, &providers)
 	if err != nil {

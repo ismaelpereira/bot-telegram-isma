@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"log"
-
 	"github.com/IsmaelPereira/telegram-bot-isma/bot/controllers"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
@@ -20,14 +18,12 @@ func VerifyAndExecuteCommand(cmd string, bot *tgbotapi.BotAPI, update *tgbotapi.
 	if f, ok := commands[cmd]; ok {
 		err := f(bot, update)
 		if err != nil {
-			log.Println(err)
 			return err
 		}
 		return nil
 	}
 	err := controllers.NotFoundHandlerUpdate(bot, update)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	return nil

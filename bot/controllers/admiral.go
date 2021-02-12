@@ -3,7 +3,6 @@ package controllers
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 
@@ -19,38 +18,30 @@ func AdmiralHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	if admiralName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAdmiral)
 		_, err := bot.Send(msg)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 	admiralPath, err := config.GetAdmiralPath()
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	file, err := os.Open(admiralPath)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	defer file.Close()
 	admiralArchive, err := ioutil.ReadAll(file)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	var admiralDecoded []types.Admiral
 	err = json.Unmarshal(admiralArchive, &admiralDecoded)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
-
 	for _, admiral := range admiralDecoded {
 		if strings.EqualFold(admiral.AdmiralName, admiralName) || strings.EqualFold(admiral.RealName, admiralName) {
 			msgs.GetAdmiralPictureAndSendMessage(admiral, update, bot)
 		}
 	}
-
-	return err
+	return nil
 }

@@ -19,7 +19,6 @@ func main() {
 func run() error {
 	telegramPath, err := config.GetTelegramKey()
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	bot, err := tgbotapi.NewBotAPI(telegramPath)
@@ -31,7 +30,6 @@ func run() error {
 	updates, err := bot.GetUpdatesChan(u)
 	for update := range updates {
 		if err := handleUpdate(bot, &update); err != nil {
-			log.Println(err)
 			continue
 		}
 	}

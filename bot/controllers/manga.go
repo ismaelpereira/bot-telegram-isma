@@ -3,7 +3,6 @@ package controllers
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -19,26 +18,20 @@ func MangaHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	if mangaName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgManga)
 		_, err := bot.Send(msg)
-		if err != nil {
-			return err
-		}
-		return nil
+		return err
 	}
 	apiResult, err := http.Get("https://api.jikan.moe/v3/search/manga?q=" + url.QueryEscape(mangaName) + "&page=1&limit=3")
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	defer apiResult.Body.Close()
 	readMangas, err := ioutil.ReadAll(apiResult.Body)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	var searchResults types.MangaResponse
 	err = json.Unmarshal(readMangas, &searchResults)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	for _, manga := range searchResults.Results {

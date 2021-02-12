@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -42,25 +41,21 @@ const (
 )
 
 //GetAdmiralPictureAndSendMessage is a function for admiral controller
-func GetAdmiralPictureAndSendMessage(ad types.Admiral, update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+func GetAdmiralPictureAndSendMessage(ad types.Admiral, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
 	adPicture, err := http.Get(ad.ProfilePicture)
 	if err != nil {
-		log.Println(err)
+		return err
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, MsgServerError)
 		_, err := bot.Send(msg)
-		if err != nil {
-			log.Println(err)
-		}
+		return err
 	}
 	defer adPicture.Body.Close()
 	adPictureData, err := ioutil.ReadAll(adPicture.Body)
 	if err != nil {
-		log.Println(err)
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, MsgNotFound)
 		_, err := bot.Send(msg)
-		if err != nil {
-			log.Println(err)
-		}
+		return err
+
 	}
 
 	adMessage := tgbotapi.NewPhotoUpload(update.Message.Chat.ID, tgbotapi.FileBytes{Bytes: adPictureData})
@@ -70,23 +65,20 @@ func GetAdmiralPictureAndSendMessage(ad types.Admiral, update *tgbotapi.Update, 
 		"\nAkuma no Mi: " + ad.AkumaNoMi + "\nAnimal: " + ad.Animal + "\nPoder: " + ad.Power + "\nInspirado em: " +
 		ad.ActorWhoInspire
 	_, err = bot.Send(adMessage)
-	if err != nil {
-		log.Println(err)
-	}
+	return err
+
 }
 
 //GetAnimePictureAndSendMessage is a function for anime controller
-func GetAnimePictureAndSendMessage(an types.Anime, update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+func GetAnimePictureAndSendMessage(an types.Anime, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
 	anPicture, err := http.Get(an.CoverPicture)
 	if err != nil {
-		log.Println(err)
-		tgbotapi.NewMessage(update.Message.Chat.ID, MsgServerError)
+		return err
 	}
 	defer anPicture.Body.Close()
 	anPictureData, err := ioutil.ReadAll(anPicture.Body)
 	if err != nil {
-		log.Println(err)
-		tgbotapi.NewMessage(update.Message.Chat.ID, MsgNotFound)
+		return err
 	}
 	anMessage := tgbotapi.NewPhotoUpload(update.Message.Chat.ID, tgbotapi.FileBytes{Bytes: anPictureData})
 	var airing string
@@ -102,22 +94,18 @@ func GetAnimePictureAndSendMessage(an types.Anime, update *tgbotapi.Update, bot 
 	anMessage.Caption = "Título: " + an.Title + "\nNota: " + strconv.FormatFloat(an.Score, 'f', 2, 64) +
 		"\nEpisódios: " + animeEpisodes + "\nPassando? " + airing
 	_, err = bot.Send(anMessage)
-	if err != nil {
-		log.Println(err)
-	}
+	return err
 }
 
 //GetMangaPictureAndSendMessage is a function for manga controller
-func GetMangaPictureAndSendMessage(m types.Manga, update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+func GetMangaPictureAndSendMessage(m types.Manga, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
 	mPicture, err := http.Get(m.CoverPicture)
 	if err != nil {
-		log.Println(err)
 		tgbotapi.NewMessage(update.Message.Chat.ID, MsgServerError)
 	}
 	defer mPicture.Body.Close()
 	mPictureData, err := ioutil.ReadAll(mPicture.Body)
 	if err != nil {
-		log.Println(err)
 		tgbotapi.NewMessage(update.Message.Chat.ID, MsgNotFound)
 	}
 	mMessage := tgbotapi.NewPhotoUpload(update.Message.Chat.ID, tgbotapi.FileBytes{Bytes: mPictureData})
@@ -131,15 +119,13 @@ func GetMangaPictureAndSendMessage(m types.Manga, update *tgbotapi.Update, bot *
 	}
 	GetMangaStatus(&m)
 	if err != nil {
-		log.Println(err)
+		return err
 	}
 	mMessage.Caption = "Título: " + m.Title + "\nNome Japonês: " + string(m.JapaneseName) + "\nNota: " +
 		strconv.FormatFloat(m.Score, 'f', 2, 64) + "\nVolumes: " + volumesNumber + "\nCapítulos: " + chaptersNumber +
 		"\nStatus: " + m.Status
 	_, err = bot.Send(mMessage)
-	if err != nil {
-		log.Println(err)
-	}
+	return err
 }
 
 //GetMangaStatus is a function for get the required manga in MAL site
@@ -147,13 +133,11 @@ func GetMangaStatus(m *types.Manga) error {
 	idManga := strconv.Itoa(m.ID)
 	animeListURL, err := http.Get("https://myanimelist.net/manga/" + url.QueryEscape(idManga))
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	defer animeListURL.Body.Close()
 	animeListCode, err := ioutil.ReadAll(animeListURL.Body)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	japaneseStartPosition := []byte("Japanese:</span>")
@@ -174,7 +158,6 @@ func GetMoviePictureAndSendMessage(mov types.MovieDbSearchResults, update *tgbot
 	var movDetailsMessage []string
 	releaseDate, err := time.Parse("2006-01-02", mov.ReleaseDate)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 	movDetailsMessage = append(movDetailsMessage,
@@ -185,14 +168,12 @@ func GetMoviePictureAndSendMessage(mov types.MovieDbSearchResults, update *tgbot
 	)
 	movPicture, err := http.Get("https://themoviedb.org/t/p/w300_and_h450_bestv2" + mov.PosterPath)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 	defer movPicture.Body.Close()
 	movPictureData, err := ioutil.ReadAll(movPicture.Body)
 	movieProvidersMessage, err := GetMovieProviders(mov)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 	var movMessage tgbotapi.PhotoConfig
@@ -208,7 +189,6 @@ func GetMoviePictureAndSendMessage(mov types.MovieDbSearchResults, update *tgbot
 func GetMovieProviders(mov types.MovieDbSearchResults) (movProvidersMessage []string, err error) {
 	apiKey, err := config.GetMovieApiKey()
 	if err != nil {
-		log.Println(err)
 
 	}
 	watchProviders, err := http.Get("https://api.themoviedb.org/3/movie/" +
@@ -217,13 +197,11 @@ func GetMovieProviders(mov types.MovieDbSearchResults) (movProvidersMessage []st
 	defer watchProviders.Body.Close()
 	providersValues, err := ioutil.ReadAll(watchProviders.Body)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 	var providers types.WatchProvidersResponse
 	err = json.Unmarshal(providersValues, &providers)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 	if country, ok := providers.Results["BR"]; ok && country != nil {

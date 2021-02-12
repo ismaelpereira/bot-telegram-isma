@@ -3,7 +3,6 @@ package controllers
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -19,16 +18,13 @@ import (
 
 var apiCache cache.Cache
 
+//MoneyHandleUpdate send the money message
 func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	command := strings.ToUpper(update.Message.CommandArguments())
 	commandSplit := strings.Fields(command)
 	if command == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgMoney)
 		_, err := bot.Send(msg)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
 		return err
 	}
 	if len(commandSplit) != 3 {
@@ -36,7 +32,6 @@ func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 			"Você digitou o comando errado. Não foi possível completar a solicitação")
 		_, err := bot.Send(msg)
 		if err != nil {
-			log.Println(err)
 			return err
 		}
 		return err
@@ -44,77 +39,67 @@ func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	commandValue := commandSplit[0]
 	currencyToConvert := commandSplit[1]
 	currencyConverted := commandSplit[2]
+	if commandSplit[1] == commandSplit[2] {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
+			commandValue+" "+currencyConverted+" to "+currencyConverted+" --> "+commandValue)
+		_, err := bot.Send(msg)
+		return err
+	}
 	amount, err := strconv.ParseFloat(commandValue, 64)
 	if err != nil {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
 			"Parece que você digitou o comando errado, tente colocar espaços. Ex: '/money 1 usd brl")
-		bot.Send(msg)
+		_, err := bot.Send(msg)
 		if err != nil {
-			log.Println(err)
 			return err
 		}
-		log.Println(err)
-		return err
+		return nil
 	}
 	var moneyAPI *types.MoneySearchResult
 	if temp := apiCache.Get(time.Now()); temp != nil {
 		moneyAPI = temp.(*types.MoneySearchResult)
+		return nil
 	}
 	if moneyAPI == nil {
 		apiKey, err := config.GetMoneyApiKey()
 		if err != nil {
-			log.Println(err)
 			return err
 		}
 		moneyResult, err := http.Get("http://data.fixer.io/api/latest?access_key=" + url.QueryEscape(apiKey))
 		if err != nil {
-			log.Println(err)
 			return err
 		}
 		defer moneyResult.Body.Close()
 		moneyValues, err := ioutil.ReadAll(moneyResult.Body)
 		if err != nil {
-			log.Println(err)
 			return err
 		}
-
 		err = json.Unmarshal(moneyValues, &moneyAPI)
 		if err != nil {
-			log.Println(err)
 			return err
 		}
 		apiCache.Set(time.Now().Add(time.Hour), moneyAPI)
 	}
-
+	if !strings.EqualFold(commandSplit[1], "EUR") && !strings.EqualFold(commandSplit[2], "EUR") {
+		currency := ((1 / moneyAPI.Rates[commandSplit[1]]) * moneyAPI.Rates[commandSplit[2]]) * amount
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+
+			" to "+currencyConverted+" --> "+strconv.FormatFloat(currency, 'f', 2, 64))
+		_, err = bot.Send(msg)
+		return err
+	}
 	if strings.EqualFold(commandSplit[1], "EUR") {
 		currency := moneyAPI.Rates[commandSplit[2]] * amount
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+
 			" to "+currencyConverted+" --> "+strconv.FormatFloat(currency, 'f', 2, 64))
 		_, err = bot.Send(msg)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
+		return err
 	}
 	if strings.EqualFold(commandSplit[2], "EUR") {
 		currency := (1 / moneyAPI.Rates[commandSplit[1]]) * amount
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+
 			" to "+currencyConverted+" --> "+strconv.FormatFloat(currency, 'f', 2, 64))
 		_, err = bot.Send(msg)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
+		return err
 	}
-	if strings.EqualFold(commandSplit[1], "EUR") == false && strings.EqualFold(commandSplit[2], "EUR") == false {
-		currency := ((1 / moneyAPI.Rates[commandSplit[1]]) * moneyAPI.Rates[commandSplit[2]]) * amount
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+
-			" to "+currencyConverted+" --> "+strconv.FormatFloat(currency, 'f', 2, 64))
-		_, err = bot.Send(msg)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-	}
-	return err
+	return nil
 }

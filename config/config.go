@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 )
@@ -43,28 +42,4 @@ func Load() *Config {
 	var configDecoded Config
 	err = json.Unmarshal(configEncoded, &configDecoded)
 	return &configDecoded
-}
-
-func GetAdmiralPath(c *Config) (string, error) {
-	pathAdmiral := c.AdmiralPath.Path
-	err := fmt.Errorf("Cannot load admiral path")
-	return pathAdmiral, err
-}
-
-func GetTelegramKey(c *Config) (string, error) {
-	telegramKey := c.Telegram.Key
-	err := fmt.Errorf("Cannot load Telegram KEY")
-	return telegramKey, err
-}
-
-func GetMoneyApiKey(c *Config) (string, error) {
-	accessKey := c.MoneyAcessKey.Key
-	err := fmt.Errorf("Cannot load Money API KEY")
-	return accessKey, err
-}
-
-func GetMovieApiKey(c *Config) (string, error) {
-	acessKey := c.MovieAcessKey.Key
-	err := fmt.Errorf("CCannot load Movie API KEY")
-	return acessKey, err
 }

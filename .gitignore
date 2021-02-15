@@ -299,3 +299,7 @@ local/
 .env
 .envrc
 telegram-bot-isma
+./dist
+./bin
+Makefile
+Dockerfile

@@ -9,15 +9,16 @@ import (
 
 //VerifyAndExecuteCommand is a function to pick the right command and execute the respective function
 func VerifyAndExecuteCommand(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update, cmd string) error {
-	commands := map[string]types.HandlerFunc{
+	Commands := map[string]types.HandlerFunc{
 		"help":    controllers.HelpHandlerUpdate,
 		"admiral": controllers.AdmiralHandleUpdate,
 		"anime":   controllers.AnimeHandleUpdate,
 		"manga":   controllers.MangaHandleUpdate,
 		"money":   controllers.MoneyHandleUpdate,
 		"movie":   controllers.MovieHandleUpdate,
+		"serie":   controllers.SeriesHandleUpdate,
 	}
-	if f, ok := commands[cmd]; ok {
+	if f, ok := Commands[cmd]; ok {
 		return f(c, bot, update)
 	}
 	return controllers.NotFoundHandlerUpdate(c, bot, update)

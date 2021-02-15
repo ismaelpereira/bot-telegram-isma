@@ -106,3 +106,17 @@ type Media struct {
 	URL     string `json:"media"`
 	Caption string `json:"caption"`
 }
+
+type SeriesResponse struct {
+	Page    int
+	Results []SeriesDbSearchResults
+}
+
+type SeriesDbSearchResults struct {
+	ID            int
+	Title         string `json:"name"`
+	OriginalTitle string `json:"original_name"`
+	Popularity    float64
+	PosterPath    string `json:"poster_path"`
+	ReleaseDate   string `json:"first_air_date"`
+}

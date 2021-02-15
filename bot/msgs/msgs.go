@@ -23,4 +23,5 @@ const (
 	MsgManga          = IconWarning + " -- O comando é /manga <nome do mangá>\nO resultado é baseado em uma pesquisa no MyanimeList"
 	MsgMoney          = IconWarning + "-- O comando é /money <quantidade> <moeda principal> <moeda a ser convertida>"
 	MsgMovie          = IconWarning + "-- O comando é /movie <nome do filme> O resultado é baseado em uma pesquisa do MovieDB"
+	MsgSerie          = IconWarning + "-- O comando é /serie <nome da serie> O resultado é baseado em uma pesquisa do MovieDB"
 )

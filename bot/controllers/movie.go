@@ -55,11 +55,13 @@ func MovieHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.
 			if len(v) > 1 {
 				kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
 					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "1"),
+						tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movie:1"),
 					),
 				))
 			}
-			movieMessage.ReplyMarkup = kb[0]
+			if len(movieResults.Results) > 1 {
+				movieMessage.ReplyMarkup = kb[0]
+			}
 			_, err = bot.Send(movieMessage)
 			if err != nil {
 				return err
@@ -79,12 +81,12 @@ func MovieHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.
 		var kb []tgbotapi.InlineKeyboardButton
 		if i != 0 {
 			kb = append(kb,
-				tgbotapi.NewInlineKeyboardButtonData(msgs.IconPrevious, strconv.Itoa(i-1)),
+				tgbotapi.NewInlineKeyboardButtonData(msgs.IconPrevious, "movie:"+strconv.Itoa(i-1)),
 			)
 		}
 		if i != (len(v) - 1) {
 			kb = append(kb,
-				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, strconv.Itoa(i+1)),
+				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movie:"+strconv.Itoa(i+1)),
 			)
 		}
 		var msgEdit types.EditMediaJSON
@@ -131,8 +133,7 @@ func getMoviePictureAndSendMessage(c *config.Config, mov types.MovieDbSearchResu
 		"\nPopularidade: "+strconv.FormatFloat(mov.Popularity, 'f', 2, 64),
 		"\nData de lançamento: "+releaseDate.Format("02/01/2006"),
 	)
-	var movPicture *http.Response
-	movPicture, err = http.Get("https://themoviedb.org/t/p/w300_and_h450_bestv2" + mov.PosterPath)
+	movPicture, err := http.Get("https://themoviedb.org/t/p/w300_and_h450_bestv2" + mov.PosterPath)
 	if err != nil {
 		return nil, err
 	}
@@ -152,9 +153,9 @@ func getMoviePictureAndSendMessage(c *config.Config, mov types.MovieDbSearchResu
 	movMessage.Caption = strings.Join(movDetailsMessage, "") + strings.Join(movieProvidersMessage, "")
 	return &movMessage, nil
 }
+
 func getMovieProviders(c *config.Config, mov types.MovieDbSearchResults) (movProvidersMessage []string, err error) {
 	apiKey := c.MovieAcessKey.Key
-
 	watchProviders, err := http.Get("https://api.themoviedb.org/3/movie/" +
 		url.QueryEscape(strconv.Itoa(mov.ID)) + "/watch/providers?api_key=" +
 		url.QueryEscape(apiKey))

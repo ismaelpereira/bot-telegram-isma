@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 )
@@ -29,75 +30,41 @@ type MovieAPI struct {
 	Key string `json:"acessKey"`
 }
 
-func GetAdmiralPath() (string, error) {
+func Load() *Config {
 	file, err := os.Open(os.Args[1])
 	if err != nil {
-		return "", err
+		return nil
 	}
 	defer file.Close()
 	configEncoded, err := ioutil.ReadAll(file)
 	if err != nil {
-		return "", err
+		return nil
 	}
 	var configDecoded Config
 	err = json.Unmarshal(configEncoded, &configDecoded)
-	pathAdmiral := configDecoded.AdmiralPath.Path
+	return &configDecoded
+}
+
+func GetAdmiralPath(c *Config) (string, error) {
+	pathAdmiral := c.AdmiralPath.Path
+	err := fmt.Errorf("Cannot load admiral path")
 	return pathAdmiral, err
 }
 
-func GetTelegramKey() (string, error) {
-	file, err := os.Open(os.Args[1])
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	configEncoded, err := ioutil.ReadAll(file)
-	if err != nil {
-		return "", err
-	}
-	var configDecoded Config
-	err = json.Unmarshal(configEncoded, &configDecoded)
-	if err != nil {
-	}
-
-	telegramKey := configDecoded.Telegram.Key
+func GetTelegramKey(c *Config) (string, error) {
+	telegramKey := c.Telegram.Key
+	err := fmt.Errorf("Cannot load Telegram KEY")
 	return telegramKey, err
 }
 
-func GetMoneyApiKey() (string, error) {
-	file, err := os.Open(os.Args[1])
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	configEncoded, err := ioutil.ReadAll(file)
-	if err != nil {
-		return "", err
-	}
-	var configDecoded Config
-	err = json.Unmarshal(configEncoded, &configDecoded)
-	if err != nil {
-		return "", err
-	}
-	accessKey := configDecoded.MoneyAcessKey.Key
+func GetMoneyApiKey(c *Config) (string, error) {
+	accessKey := c.MoneyAcessKey.Key
+	err := fmt.Errorf("Cannot load Money API KEY")
 	return accessKey, err
 }
 
-func GetMovieApiKey() (string, error) {
-	file, err := os.Open(os.Args[1])
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	configEncoded, err := ioutil.ReadAll(file)
-	if err != nil {
-		return "", err
-	}
-	var configDecoded Config
-	err = json.Unmarshal(configEncoded, &configDecoded)
-	if err != nil {
-		return "", err
-	}
-	acessKey := configDecoded.MovieAcessKey.Key
+func GetMovieApiKey(c *Config) (string, error) {
+	acessKey := c.MovieAcessKey.Key
+	err := fmt.Errorf("CCannot load Movie API KEY")
 	return acessKey, err
 }

@@ -9,12 +9,13 @@ import (
 	"strings"
 
 	"github.com/IsmaelPereira/telegram-bot-isma/bot/msgs"
+	"github.com/IsmaelPereira/telegram-bot-isma/config"
 	"github.com/IsmaelPereira/telegram-bot-isma/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
 //AnimeHandleUpdate is a function for anime work
-func AnimeHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func AnimeHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	animeName := strings.TrimSpace(update.Message.CommandArguments())
 	if animeName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAnime)

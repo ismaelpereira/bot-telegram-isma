@@ -19,7 +19,7 @@ import (
 var apiCache cache.Cache
 
 //MoneyHandleUpdate send the money message
-func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func MoneyHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	command := strings.ToUpper(update.Message.CommandArguments())
 	commandSplit := strings.Fields(command)
 	if command == "" {
@@ -61,10 +61,7 @@ func MoneyHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		return nil
 	}
 	if moneyAPI == nil {
-		apiKey, err := config.GetMoneyApiKey()
-		if err != nil {
-			return err
-		}
+		apiKey := c.MoneyAcessKey.Key
 		moneyResult, err := http.Get("http://data.fixer.io/api/latest?access_key=" + url.QueryEscape(apiKey))
 		if err != nil {
 			return err

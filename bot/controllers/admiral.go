@@ -15,17 +15,14 @@ import (
 )
 
 //AdmiralHandleUpdate is a function for admiral work
-func AdmiralHandleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func AdmiralHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	admiralName := strings.TrimSpace(update.Message.CommandArguments())
 	if admiralName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAdmiral)
 		_, err := bot.Send(msg)
 		return err
 	}
-	admiralPath, err := config.GetAdmiralPath()
-	if err != nil {
-		return err
-	}
+	admiralPath := c.AdmiralPath.Path
 	file, err := os.Open(admiralPath)
 	if err != nil {
 		return err

@@ -17,11 +17,10 @@ func main() {
 }
 
 func run() error {
-	telegramPath, err := config.GetTelegramKey()
-	if err != nil {
-		return err
-	}
-	bot, err := tgbotapi.NewBotAPI(telegramPath)
+	c := config.Load()
+
+	telegramKey := c.Telegram.Key
+	bot, err := tgbotapi.NewBotAPI(telegramKey)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -29,25 +28,19 @@ func run() error {
 	u := tgbotapi.NewUpdate(0)
 	updates, err := bot.GetUpdatesChan(u)
 	for update := range updates {
-		if err := handleUpdate(bot, &update); err != nil {
+		if err := handleUpdate(c, bot, &update); err != nil {
 			continue
 		}
 	}
 	return nil
 }
 
-func handleUpdate(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func handleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	if update.CallbackQuery != nil {
-		controllers.MovieHandleUpdate(bot, update)
+		controllers.MovieHandleUpdate(c, bot, update)
 	}
-	if update.Message == nil {
+	if update.Message == nil || !update.Message.IsCommand() {
 		return nil
 	}
-	if update.Message.IsCommand() {
-		err := handler.VerifyAndExecuteCommand(strings.ToLower(update.Message.Command()), bot, update)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return handler.VerifyAndExecuteCommand(c, bot, update, strings.ToLower(update.Message.Command()))
 }

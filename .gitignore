@@ -301,5 +301,3 @@ local/
 telegram-bot-isma
 ./dist
 ./bin
-Makefile
-Dockerfile

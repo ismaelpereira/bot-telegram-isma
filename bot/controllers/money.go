@@ -1,14 +1,10 @@
 package controllers
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/IsmaelPereira/telegram-bot-isma/api/clients"
 	"github.com/IsmaelPereira/telegram-bot-isma/bot/msgs"
 	"github.com/IsmaelPereira/telegram-bot-isma/cache"
 	"github.com/IsmaelPereira/telegram-bot-isma/config"
@@ -55,44 +51,40 @@ func MoneyHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.
 		}
 		return nil
 	}
-	var moneyAPI *types.MoneySearchResult
-	if temp := apiCache.Get(time.Now()); temp != nil {
-		moneyAPI = temp.(*types.MoneySearchResult)
-		return nil
+	var moneyResults *types.MoneySearchResult
+	var moneyRequest clients.MoneyApi
+	moneyRequest.ApiKey = c.MoneyAcessKey.Key
+	moneyResults, err = moneyRequest.GetCurrencies()
+	if err != nil {
+		return err
 	}
-	if moneyAPI == nil {
-		apiKey := c.MoneyAcessKey.Key
-		moneyResult, err := http.Get("http://data.fixer.io/api/latest?access_key=" + url.QueryEscape(apiKey))
-		if err != nil {
-			return err
-		}
-		defer moneyResult.Body.Close()
-		moneyValues, err := ioutil.ReadAll(moneyResult.Body)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(moneyValues, &moneyAPI)
-		if err != nil {
-			return err
-		}
-		apiCache.Set(time.Now().Add(time.Hour), moneyAPI)
-	}
+	// if temp := apiCache.Get(time.Now()); temp != nil {
+	// 	moneyResults = temp.(*types.MoneySearchResult)
+	// 	return nil
+	// }
+	// if moneyResults == nil {
+	// 	moneyResults, err = moneyRequest.GetCurrencies()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	apiCache.Set(time.Now().Add(time.Hour), moneyResults)
+	// }
 	if !strings.EqualFold(commandSplit[1], "EUR") && !strings.EqualFold(commandSplit[2], "EUR") {
-		currency := ((1 / moneyAPI.Rates[commandSplit[1]]) * moneyAPI.Rates[commandSplit[2]]) * amount
+		currency := ((1 / moneyResults.Rates[commandSplit[1]]) * moneyResults.Rates[commandSplit[2]]) * amount
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+
 			" to "+currencyConverted+" --> "+strconv.FormatFloat(currency, 'f', 2, 64))
 		_, err = bot.Send(msg)
 		return err
 	}
 	if strings.EqualFold(commandSplit[1], "EUR") {
-		currency := moneyAPI.Rates[commandSplit[2]] * amount
+		currency := moneyResults.Rates[commandSplit[2]] * amount
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+
 			" to "+currencyConverted+" --> "+strconv.FormatFloat(currency, 'f', 2, 64))
 		_, err = bot.Send(msg)
 		return err
 	}
 	if strings.EqualFold(commandSplit[2], "EUR") {
-		currency := (1 / moneyAPI.Rates[commandSplit[1]]) * amount
+		currency := (1 / moneyResults.Rates[commandSplit[1]]) * amount
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+
 			" to "+currencyConverted+" --> "+strconv.FormatFloat(currency, 'f', 2, 64))
 		_, err = bot.Send(msg)

@@ -29,7 +29,7 @@ COPY --from=builder /go/src/github.com/IsmaelPereira/bot-telegram-isma/ /opt/tel
 CMD ["/opt/telegram-bot-isma/bin/telegram-bot","/etc/telegram-bot/config/"]
 
 RUN apk --no-cache add ca-certificates \
-    && ln -s /opt/telegram-bot/bin/telegram-bot /usr/local/bin/telegram-bot \
+    && ln -s /opt/telegram-bot-isma/bin/telegram-bot /usr/local/bin/telegram-bot \
     && addgroup -g 1000 -S telegrambot && adduser -u 1000 -S telegrambot -G telegrambot 
 
 USER telegrambot

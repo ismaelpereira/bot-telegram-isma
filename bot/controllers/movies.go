@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/IsmaelPereira/telegram-bot-isma/api/clients"
 	"github.com/IsmaelPereira/telegram-bot-isma/bot/msgs"
 	"github.com/IsmaelPereira/telegram-bot-isma/config"
 	"github.com/IsmaelPereira/telegram-bot-isma/types"
@@ -18,36 +18,31 @@ import (
 )
 
 //MovieMenu is a map for mantain the results to make the button
-var MovieMenu = make(map[int64][]types.MovieDbSearchResults)
+var MoviesMenu = make(map[int64][]types.Movie)
+var MoviesSearch clients.MovieDB
 
 //MovieHandleUpdate send the movie message
-func MovieHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
-	var movieResults types.MovieResponse
+func MoviesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	if update.CallbackQuery == nil {
 		movieName := strings.TrimSpace(update.Message.CommandArguments())
 		if movieName == "" {
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgMovie)
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgMovies)
 			_, err := bot.Send(msg)
 			return err
 		}
-		apiKey := c.MovieAcessKey.Key
-		movieAPI, err := http.Get("https://api.themoviedb.org/3/search/movie?api_key=" + url.QueryEscape(apiKey) +
-			"&page=1&langague=pt-br&query=" + url.QueryEscape(movieName))
+		MoviesSearch.ApiKey = c.MovieAcessKey.Key
+		moviesResults, err := MoviesSearch.SearchMovie(movieName)
 		if err != nil {
 			return err
 		}
-		defer movieAPI.Body.Close()
-		searchValues, err := ioutil.ReadAll(movieAPI.Body)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(searchValues, &movieResults)
-		if err != nil {
-			return err
-		}
-		MovieMenu[update.Message.Chat.ID] = movieResults.Results
-		if v, ok := MovieMenu[update.Message.Chat.ID]; ok && len(v) != 0 {
-			movieMessage, err := getMoviePictureAndSendMessage(c, v[0], update, bot)
+		MoviesMenu[update.Message.Chat.ID] = moviesResults.Results
+		if v, ok := MoviesMenu[update.Message.Chat.ID]; ok && len(v) != 0 {
+			moviesProviders, err := MoviesSearch.GetMovieProviders(strconv.Itoa(v[0].ID))
+			if err != nil {
+				return err
+			}
+			v[0].Providers = *moviesProviders
+			movieMessage, err := getMoviesPictureAndSendMessage(c, bot, update, v[0])
 			if err != nil {
 				return err
 			}
@@ -55,11 +50,11 @@ func MovieHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.
 			if len(v) > 1 {
 				kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
 					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movie:1"),
+						tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movies:1"),
 					),
 				))
 			}
-			if len(movieResults.Results) > 1 {
+			if len(moviesResults.Results) > 1 {
 				movieMessage.ReplyMarkup = kb[0]
 			}
 			_, err = bot.Send(movieMessage)
@@ -69,24 +64,31 @@ func MovieHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.
 		}
 		return nil
 	}
+	return movieArrowButtonsAction(c, bot, update)
+}
+
+func movieArrowButtonsAction(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	i, err := strconv.Atoi(update.CallbackQuery.Data)
 	if err != nil {
 		return err
 	}
-	if v, ok := MovieMenu[update.CallbackQuery.Message.Chat.ID]; ok && len(v) != 0 {
-		movieMessage, err := getMoviePictureAndSendMessage(c, v[i], update, bot)
+	if v, ok := MoviesMenu[update.CallbackQuery.Message.Chat.ID]; ok && len(v) != 0 {
+		moviesProviders, err := MoviesSearch.GetMovieProviders(strconv.Itoa(v[i].ID))
+		v[i].Providers = *moviesProviders
+		movieMessage, err := getMoviesPictureAndSendMessage(c, bot, update, v[i])
+
 		if err != nil {
 			return err
 		}
 		var kb []tgbotapi.InlineKeyboardButton
 		if i != 0 {
 			kb = append(kb,
-				tgbotapi.NewInlineKeyboardButtonData(msgs.IconPrevious, "movie:"+strconv.Itoa(i-1)),
+				tgbotapi.NewInlineKeyboardButtonData(msgs.IconPrevious, "movies:"+strconv.Itoa(i-1)),
 			)
 		}
 		if i != (len(v) - 1) {
 			kb = append(kb,
-				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movie:"+strconv.Itoa(i+1)),
+				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movies:"+strconv.Itoa(i+1)),
 			)
 		}
 		var msgEdit types.EditMediaJSON
@@ -99,17 +101,16 @@ func MovieHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.
 		msgEdit.Media.Type = "photo"
 		if v[i].PosterPath == "" {
 			msgEdit.Media.URL = "https://badybassitt.sp.gov.br/lib/img/no-image.jpg"
-		}
-		if v[i].PosterPath != "" {
+		} else {
 			msgEdit.Media.URL = "https://www.themoviedb.org/t/p/w300_and_h450_bestv2" + v[i].PosterPath
 		}
-
 		messageJSON, err := json.Marshal(msgEdit)
 		if err != nil {
 			return err
 		}
-		telegramKey := c.Telegram.Key
-		sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(telegramKey)+"/editMessageMedia", "application/json", bytes.NewBuffer(messageJSON))
+
+		sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(c.Telegram.Key)+"/editMessageMedia",
+			"application/json", bytes.NewBuffer(messageJSON))
 		if err != nil {
 			return err
 		}
@@ -121,55 +122,33 @@ func MovieHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.
 	return nil
 }
 
-func getMoviePictureAndSendMessage(c *config.Config, mov types.MovieDbSearchResults, update *tgbotapi.Update, bot *tgbotapi.BotAPI) (*tgbotapi.PhotoConfig, error) {
-	var movDetailsMessage []string
+func getMoviesPictureAndSendMessage(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update, mov types.Movie) (*tgbotapi.PhotoConfig, error) {
+	var moviesDetailsMessage []string
 	releaseDate, err := time.Parse("2006-01-02", mov.ReleaseDate)
 	if err != nil {
 		return nil, err
 	}
-	movDetailsMessage = append(movDetailsMessage,
+	moviesDetailsMessage = append(moviesDetailsMessage,
 		"\nTítulo: "+mov.Title,
 		"\nTítulo Original: "+mov.OriginalTitle,
 		"\nPopularidade: "+strconv.FormatFloat(mov.Popularity, 'f', 2, 64),
 		"\nData de lançamento: "+releaseDate.Format("02/01/2006"),
 	)
-	movPicture, err := http.Get("https://themoviedb.org/t/p/w300_and_h450_bestv2" + mov.PosterPath)
-	if err != nil {
-		return nil, err
-	}
-	defer movPicture.Body.Close()
-	movPictureData, err := ioutil.ReadAll(movPicture.Body)
-	movieProvidersMessage, err := getMovieProviders(c, mov)
-	if err != nil {
-		return nil, err
-	}
+	moviesProvidersMessage := getMovieProviders(mov)
 	var movMessage tgbotapi.PhotoConfig
 	if update.CallbackQuery == nil {
-		movMessage = tgbotapi.NewPhotoUpload(update.Message.Chat.ID, tgbotapi.FileBytes{Bytes: movPictureData})
+		movMessage = tgbotapi.NewPhotoShare(update.Message.Chat.ID, "https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+mov.PosterPath)
 	}
 	if update.CallbackQuery != nil {
-		movMessage = tgbotapi.NewPhotoUpload(update.CallbackQuery.Message.Chat.ID, tgbotapi.FileBytes{Bytes: movPictureData})
+		movMessage = tgbotapi.NewPhotoShare(update.CallbackQuery.Message.Chat.ID, "https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+mov.PosterPath)
 	}
-	movMessage.Caption = strings.Join(movDetailsMessage, "") + strings.Join(movieProvidersMessage, "")
+	movMessage.Caption = strings.Join(moviesDetailsMessage, "") + strings.Join(moviesProvidersMessage, "")
 	return &movMessage, nil
 }
 
-func getMovieProviders(c *config.Config, mov types.MovieDbSearchResults) (movProvidersMessage []string, err error) {
-	apiKey := c.MovieAcessKey.Key
-	watchProviders, err := http.Get("https://api.themoviedb.org/3/movie/" +
-		url.QueryEscape(strconv.Itoa(mov.ID)) + "/watch/providers?api_key=" +
-		url.QueryEscape(apiKey))
-	providersValues, err := ioutil.ReadAll(watchProviders.Body)
-	if err != nil {
-		return nil, err
-	}
-	defer watchProviders.Body.Close()
-	var providers types.WatchProvidersResponse
-	err = json.Unmarshal(providersValues, &providers)
-	if err != nil {
-		return nil, err
-	}
-	if country, ok := providers.Results["BR"]; ok && country != nil {
+func getMovieProviders(mov types.Movie) []string {
+	var movProvidersMessage []string
+	if country, ok := mov.Providers.Results["BR"]; ok && country != nil {
 		if country.Buy != nil {
 			movProvidersMessage = append(movProvidersMessage, "\nPara Comprar: ")
 			for i, providerBuy := range country.Buy {
@@ -206,5 +185,5 @@ func getMovieProviders(c *config.Config, mov types.MovieDbSearchResults) (movPro
 			}
 		}
 	}
-	return movProvidersMessage, err
+	return movProvidersMessage
 }

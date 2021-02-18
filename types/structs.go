@@ -4,6 +4,19 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
+type EditMediaJSON struct {
+	ChatID      int64                         `json:"chat_id"`
+	MessageID   int                           `json:"message_id"`
+	Media       Media                         `json:"media"`
+	ReplyMarkup tgbotapi.InlineKeyboardMarkup `json:"reply_markup"`
+}
+
+type Media struct {
+	Type    string `json:"type"`
+	URL     string `json:"media"`
+	Caption string `json:"caption"`
+}
+
 type Admiral struct {
 	RealName        string
 	AdmiralName     string
@@ -63,16 +76,17 @@ type MoneySearchResult struct {
 
 type MovieResponse struct {
 	Page    int
-	Results []MovieDbSearchResults
+	Results []Movie
 }
 
-type MovieDbSearchResults struct {
+type Movie struct {
 	ID            int
 	Title         string
 	OriginalTitle string  `json:"original_title"`
 	ReleaseDate   string  `json:"release_date"`
 	PosterPath    string  `json:"poster_path"`
 	Popularity    float64 `json:"popularity"`
+	Providers     WatchProvidersResponse
 }
 
 type WatchProvidersResponse struct {
@@ -82,41 +96,42 @@ type WatchProvidersResponse struct {
 
 type CountryOptions struct {
 	Link     string
-	Rent     []*ProviderDetails
-	Buy      []*ProviderDetails
-	Flatrate []*ProviderDetails
+	Rent     []*Provider
+	Buy      []*Provider
+	Flatrate []*Provider
 }
 
-type ProviderDetails struct {
+type Provider struct {
 	DisplayPriority int    `json:"display_priority"`
-	LogoPath        string `json:"logo_path"`
 	ProviderID      int    `json:"provider_id"`
 	ProviderName    string `json:"provider_name"`
 }
 
-type EditMediaJSON struct {
-	ChatID      int64                         `json:"chat_id"`
-	MessageID   int                           `json:"message_id"`
-	Media       Media                         `json:"media"`
-	ReplyMarkup tgbotapi.InlineKeyboardMarkup `json:"reply_markup"`
-}
-
-type Media struct {
-	Type    string `json:"type"`
-	URL     string `json:"media"`
-	Caption string `json:"caption"`
-}
-
-type SeriesResponse struct {
+type TVShowResponse struct {
 	Page    int
-	Results []SeriesDbSearchResults
+	Results []TVShow
 }
 
-type SeriesDbSearchResults struct {
+type TVShow struct {
 	ID            int
 	Title         string `json:"name"`
 	OriginalTitle string `json:"original_name"`
 	Popularity    float64
 	PosterPath    string `json:"poster_path"`
 	ReleaseDate   string `json:"first_air_date"`
+	TVShowDetails TVShowDetails
+	Providers     WatchProvidersResponse
+}
+
+type TVShowDetails struct {
+	Status       string
+	SeasonNumber int `json:"number_of_seasons"`
+	Seasons      []TVShowSeasonDetails
+}
+
+type TVShowSeasonDetails struct {
+	EpisodesCount int `json:"episode_count"`
+	Name          string
+	AirDate       string `json:"air_date"`
+	PosterPath    string `json:"poster_path"`
 }

@@ -6,3 +6,5 @@ import (
 )
 
 type HandlerFunc func(*config.Config, *tgbotapi.BotAPI, *tgbotapi.Update) error
+
+type HandlerCallback func(*config.Config, *tgbotapi.BotAPI, *tgbotapi.Update) error

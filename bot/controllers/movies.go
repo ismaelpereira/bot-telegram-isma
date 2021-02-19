@@ -41,7 +41,17 @@ func MoviesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi
 			if err != nil {
 				return err
 			}
+			moviesDetails, err := MoviesSearch.GetMovieDetails(strconv.Itoa(v[0].ID))
+			if err != nil {
+				return err
+			}
+			moviesCredits, err := MoviesSearch.GetMovieCredits(strconv.Itoa(v[0].ID))
+			if err != nil {
+				return err
+			}
 			v[0].Providers = *moviesProviders
+			v[0].Details = *moviesDetails
+			v[0].Credits = *moviesCredits
 			movieMessage, err := getMoviesPictureAndSendMessage(c, bot, update, v[0])
 			if err != nil {
 				return err
@@ -74,9 +84,18 @@ func movieArrowButtonsAction(c *config.Config, bot *tgbotapi.BotAPI, update *tgb
 	}
 	if v, ok := MoviesMenu[update.CallbackQuery.Message.Chat.ID]; ok && len(v) != 0 {
 		moviesProviders, err := MoviesSearch.GetMovieProviders(strconv.Itoa(v[i].ID))
+		if err != nil {
+			return err
+		}
 		v[i].Providers = *moviesProviders
+		moviesDetails, err := MoviesSearch.GetMovieDetails(strconv.Itoa(v[i].ID))
+		if err != nil {
+			return err
+		}
+		v[i].Details = *moviesDetails
+		moviesCredits, err := MoviesSearch.GetMovieCredits(strconv.Itoa(v[i].ID))
+		v[i].Credits = *moviesCredits
 		movieMessage, err := getMoviesPictureAndSendMessage(c, bot, update, v[i])
-
 		if err != nil {
 			return err
 		}
@@ -128,13 +147,23 @@ func getMoviesPictureAndSendMessage(c *config.Config, bot *tgbotapi.BotAPI, upda
 	if err != nil {
 		return nil, err
 	}
+	if err != nil {
+		return nil, err
+	}
+	duration, err := time.ParseDuration(strconv.Itoa(mov.Details.Duration) + "m")
+	if err != nil {
+		return nil, err
+	}
 	moviesDetailsMessage = append(moviesDetailsMessage,
 		"\nTítulo: "+mov.Title,
 		"\nTítulo Original: "+mov.OriginalTitle,
 		"\nPopularidade: "+strconv.FormatFloat(mov.Popularity, 'f', 2, 64),
 		"\nData de lançamento: "+releaseDate.Format("02/01/2006"),
+		"\nDuração: "+duration.String(),
+		"\nNota: "+strconv.FormatFloat(mov.Details.Rating, 'f', 2, 64),
 	)
 	moviesProvidersMessage := getMovieProviders(mov)
+	moviesCreditsMessage := getMovieDirector(mov)
 	var movMessage tgbotapi.PhotoConfig
 	if update.CallbackQuery == nil {
 		movMessage = tgbotapi.NewPhotoShare(update.Message.Chat.ID, "https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+mov.PosterPath)
@@ -142,7 +171,7 @@ func getMoviesPictureAndSendMessage(c *config.Config, bot *tgbotapi.BotAPI, upda
 	if update.CallbackQuery != nil {
 		movMessage = tgbotapi.NewPhotoShare(update.CallbackQuery.Message.Chat.ID, "https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+mov.PosterPath)
 	}
-	movMessage.Caption = strings.Join(moviesDetailsMessage, "") + strings.Join(moviesProvidersMessage, "")
+	movMessage.Caption = strings.Join(moviesDetailsMessage, "") + strings.Join(moviesProvidersMessage, "") + "\nDiretor: " + strings.Join(moviesCreditsMessage, ",")
 	return &movMessage, nil
 }
 
@@ -186,4 +215,16 @@ func getMovieProviders(mov types.Movie) []string {
 		}
 	}
 	return movProvidersMessage
+}
+
+func getMovieDirector(mov types.Movie) []string {
+	directors := make([]string, 0, 2)
+	for _, crew := range mov.Credits.Crew {
+		if crew.Job == "Director" && crew.Department == "Directing" {
+			directors = append(directors, crew.Name)
+		}
+	}
+	// separators := strings.Count(strings.Join(directors, ""), ".")
+	// directorString := strings.Replace(strings.Join(directors, ""), ".", ",", separators-1)
+	return directors
 }

@@ -87,6 +87,24 @@ type Movie struct {
 	PosterPath    string  `json:"poster_path"`
 	Popularity    float64 `json:"popularity"`
 	Providers     WatchProvidersResponse
+	Details       MovieDetails
+	Credits       MovieCredits
+}
+
+type MovieDetails struct {
+	Duration int     `json:"runtime"`
+	Rating   float64 `json:"vote_average"`
+}
+
+type MovieCredits struct {
+	ID   int
+	Crew []Crew
+}
+
+type Crew struct {
+	Name       string
+	Department string
+	Job        string
 }
 
 type WatchProvidersResponse struct {
@@ -127,6 +145,8 @@ type TVShowDetails struct {
 	Status       string
 	SeasonNumber int `json:"number_of_seasons"`
 	Seasons      []TVShowSeasonDetails
+	Rating       float64 `json:"vote_average"`
+	CreatedBy    []Crew  `json:"created_by"`
 }
 
 type TVShowSeasonDetails struct {

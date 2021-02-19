@@ -19,6 +19,8 @@ func VerifyAndExecuteCommand(c *config.Config, bot *tgbotapi.BotAPI, update *tgb
 		"money":    controllers.MoneyHandleUpdate,
 		"movies":   controllers.MoviesHandleUpdate,
 		"series":   controllers.SeriesHandleUpdate,
+		"reminder": controllers.TimerHandleUpdate,
+		"now":      controllers.TimerHandleUpdate,
 	}
 	if f, ok := Commands[cmd]; ok {
 		return f(c, bot, update)

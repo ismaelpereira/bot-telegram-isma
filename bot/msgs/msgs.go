@@ -24,4 +24,6 @@ const (
 	MsgMoney          = IconWarning + "-- O comando é /money <quantidade> <moeda principal> <moeda a ser convertida>"
 	MsgMovies         = IconWarning + "-- O comando é /movies <nome do filme> O resultado é baseado em uma pesquisa do MovieDB"
 	MsgTVShow         = IconWarning + "-- O comando é /series <nome da serie> O resultado é baseado em uma pesquisa do MovieDB"
+	MsgReminder       = IconWarning + "-- O comando é /reminder <tempo> <medida de tempo> <mensagem>"
+	MsgNow            = IconWarning + "-- O comando é /now <operação> <tempo> <medida de tempo>"
 )

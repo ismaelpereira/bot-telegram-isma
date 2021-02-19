@@ -78,12 +78,12 @@ func SeriesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi
 		return nil
 	}
 	if strings.HasPrefix(update.CallbackQuery.Data, "seasons:") {
-		return HasPrefix(c, update)
+		return hasCallback(c, update)
 	}
 	return tvShowArrowButtonsAction(c, bot, update)
 }
 
-func HasPrefix(c *config.Config, update *tgbotapi.Update) error {
+func hasCallback(c *config.Config, update *tgbotapi.Update) error {
 	update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "seasons:")
 	if strings.Contains(update.CallbackQuery.Data, ":") {
 		lastBin := strings.Index(update.CallbackQuery.Data, ":")
@@ -265,9 +265,11 @@ func getTVShowPictureAndSendMessage(c *config.Config, bot *tgbotapi.BotAPI, upda
 		"\nTítulo Original: "+tvShow.OriginalTitle,
 		"\nPopularidade: "+strconv.FormatFloat(tvShow.Popularity, 'f', 2, 64),
 		"\nData de lançamento: "+releaseDate.Format("02/06/2006"),
+		"\nNota: "+strconv.FormatFloat(tvShow.TVShowDetails.Rating, 'f', 2, 64),
 	)
-	tvShowSeasonsDetails := GetTVShowSeasonDetails(tvShow)
-	tvShowProvidersMessage := GetTVShowProviders(tvShow)
+	tvShowSeasonsDetails := getTVShowSeasonDetails(tvShow)
+	tvShowProvidersMessage := getTVShowProviders(tvShow)
+	tvShowDirector := getTvShowDirector(tvShow)
 	var tvShowMessage tgbotapi.PhotoConfig
 	if update.CallbackQuery == nil {
 		tvShowMessage = tgbotapi.NewPhotoShare(update.Message.Chat.ID, "https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+tvShow.PosterPath)
@@ -275,11 +277,11 @@ func getTVShowPictureAndSendMessage(c *config.Config, bot *tgbotapi.BotAPI, upda
 	if update.CallbackQuery != nil {
 		tvShowMessage = tgbotapi.NewPhotoShare(update.CallbackQuery.Message.Chat.ID, "https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+tvShow.PosterPath)
 	}
-	tvShowMessage.Caption = strings.Join(tvShowDetailsMessage, "") + strings.Join(tvShowSeasonsDetails, "") + strings.Join(tvShowProvidersMessage, "")
+	tvShowMessage.Caption = strings.Join(tvShowDetailsMessage, "") + strings.Join(tvShowSeasonsDetails, "") + strings.Join(tvShowProvidersMessage, "") + "\nDiretores: " + strings.Join(tvShowDirector, ",")
 	return &tvShowMessage, nil
 }
 
-func GetTVShowSeasonDetails(tvShow types.TVShow) []string {
+func getTVShowSeasonDetails(tvShow types.TVShow) []string {
 	var seriesSeasonDetails []string
 	seriesSeasonDetails = append(seriesSeasonDetails,
 		"\nNúmero de temporadas: "+strconv.Itoa(tvShow.TVShowDetails.SeasonNumber),
@@ -287,7 +289,7 @@ func GetTVShowSeasonDetails(tvShow types.TVShow) []string {
 	return seriesSeasonDetails
 }
 
-func GetTVShowProviders(tvShow types.TVShow) []string {
+func getTVShowProviders(tvShow types.TVShow) []string {
 	var tvShowProvidersMessage []string
 	if country, ok := tvShow.Providers.Results["BR"]; ok && country != nil {
 		if country.Buy != nil {
@@ -314,4 +316,15 @@ func GetTVShowProviders(tvShow types.TVShow) []string {
 		}
 	}
 	return tvShowProvidersMessage
+}
+
+func getTvShowDirector(tvShow types.TVShow) []string {
+	var directors []string
+	for _, director := range tvShow.TVShowDetails.CreatedBy {
+		directors = append(directors, director.Name)
+	}
+	if len(tvShow.TVShowDetails.CreatedBy) == 0 {
+		directors = append(directors, "-")
+	}
+	return directors
 }

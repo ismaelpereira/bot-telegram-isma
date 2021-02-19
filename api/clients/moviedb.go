@@ -56,6 +56,41 @@ func (t *MovieDB) GetMovieProviders(movieID string) (*types.WatchProvidersRespon
 	return &providers, nil
 }
 
+func (t *MovieDB) GetMovieDetails(movieID string) (*types.MovieDetails, error) {
+	movieDetails, err := http.Get("https://api.themoviedb.org/3/movie/" + url.QueryEscape(movieID) +
+		"?api_key=" + url.QueryEscape(t.ApiKey) + "&language=pt_BR")
+	if err != nil {
+		return nil, err
+	}
+	defer movieDetails.Body.Close()
+	movDetails, err := ioutil.ReadAll(movieDetails.Body)
+	if err != nil {
+		return nil, err
+	}
+	var details types.MovieDetails
+	err = json.Unmarshal(movDetails, &details)
+	if err != nil {
+		return nil, err
+	}
+	return &details, nil
+}
+
+func (t *MovieDB) GetMovieCredits(movieID string) (*types.MovieCredits, error) {
+	movieCredits, err := http.Get("https://api.themoviedb.org/3/movie/" + url.QueryEscape(movieID) +
+		"/credits?api_key=" + url.QueryEscape(t.ApiKey))
+	if err != nil {
+		return nil, err
+	}
+	defer movieCredits.Body.Close()
+	movCredits, err := ioutil.ReadAll(movieCredits.Body)
+	var credits types.MovieCredits
+	err = json.Unmarshal(movCredits, &credits)
+	if err != nil {
+		return nil, err
+	}
+	return &credits, nil
+}
+
 func (t *TVShowDB) SearchTVShow(TVShowTitle string) (*types.TVShowResponse, error) {
 	TVShowAPI, err := http.Get("https://api.themoviedb.org/3/search/tv?api_key=" + url.QueryEscape(t.ApiKey) +
 		"&language=pt-BR&page=1&include_adult=false&query=" + url.QueryEscape(TVShowTitle))

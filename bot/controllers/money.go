@@ -3,6 +3,7 @@ package controllers
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/IsmaelPereira/telegram-bot-isma/api/clients"
 	"github.com/IsmaelPereira/telegram-bot-isma/bot/msgs"
@@ -27,9 +28,6 @@ func MoneyHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
 			"Você digitou o comando errado. Não foi possível completar a solicitação")
 		_, err := bot.Send(msg)
-		if err != nil {
-			return err
-		}
 		return err
 	}
 	commandValue := commandSplit[0]
@@ -53,22 +51,20 @@ func MoneyHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.
 	}
 	var moneyResults *types.MoneySearchResult
 	var moneyRequest clients.MoneyApi
-	moneyRequest.ApiKey = c.MoneyAcessKey.Key
-	moneyResults, err = moneyRequest.GetCurrencies()
 	if err != nil {
 		return err
 	}
-	// if temp := apiCache.Get(time.Now()); temp != nil {
-	// 	moneyResults = temp.(*types.MoneySearchResult)
-	// 	return nil
-	// }
-	// if moneyResults == nil {
-	// 	moneyResults, err = moneyRequest.GetCurrencies()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	apiCache.Set(time.Now().Add(time.Hour), moneyResults)
-	// }
+	if temp := apiCache.Get(time.Now()); temp != nil {
+		moneyResults = temp.(*types.MoneySearchResult)
+	}
+	if moneyResults == nil {
+		moneyRequest.ApiKey = c.MoneyAcessKey.Key
+		moneyResults, err = moneyRequest.GetCurrencies()
+		if err != nil {
+			return err
+		}
+		apiCache.Set(time.Now().Add(time.Hour), moneyResults)
+	}
 	if !strings.EqualFold(commandSplit[1], "EUR") && !strings.EqualFold(commandSplit[2], "EUR") {
 		currency := ((1 / moneyResults.Rates[commandSplit[1]]) * moneyResults.Rates[commandSplit[2]]) * amount
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+

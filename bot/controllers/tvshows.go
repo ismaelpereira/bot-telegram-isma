@@ -40,6 +40,9 @@ func SeriesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi
 				return err
 			}
 			tvShowProviders, err := TvShowSearch.GetTVShowProviders(strconv.Itoa(v[0].ID))
+			if err != nil {
+				return err
+			}
 			v[0].TVShowDetails = *tvShowDetails
 			v[0].Providers = *tvShowProviders
 			tvShowMessage, err := getTVShowPictureAndSendMessage(c, bot, update, v[0])
@@ -56,6 +59,13 @@ func SeriesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi
 			}
 			if len(tvShowResults.Results) > 1 {
 				tvShowMessage.ReplyMarkup = kb[0]
+			}
+			if len(v) == 1 {
+				tvShowMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonData("Detalhes", "tvshows:seasons:0"),
+					),
+				)
 			}
 			_, err = bot.Send(tvShowMessage)
 			if err != nil {

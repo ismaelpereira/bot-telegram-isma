@@ -46,6 +46,9 @@ func SeriesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi
 			v[0].TVShowDetails = *tvShowDetails
 			v[0].Providers = *tvShowProviders
 			tvShowMessage, err := getTVShowPictureAndSendMessage(c, bot, update, v[0])
+			if err != nil {
+				return err
+			}
 			var kb []tgbotapi.InlineKeyboardMarkup
 			if len(v) > 1 {
 				kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(

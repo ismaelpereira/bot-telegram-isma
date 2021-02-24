@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/IsmaelPereira/telegram-bot-isma/cache"
-	"github.com/IsmaelPereira/telegram-bot-isma/types"
+	"github.com/ismaelpereira/telegram-bot-isma/cache"
+	"github.com/ismaelpereira/telegram-bot-isma/types"
 	"github.com/stretchr/testify/assert"
 )
 

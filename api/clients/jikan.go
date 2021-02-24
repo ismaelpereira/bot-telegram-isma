@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/IsmaelPereira/telegram-bot-isma/types"
+	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
 type AnimeApi struct{}

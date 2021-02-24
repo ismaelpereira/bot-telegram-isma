@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/IsmaelPereira/telegram-bot-isma/types"
+	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
 type MoneyApi struct {

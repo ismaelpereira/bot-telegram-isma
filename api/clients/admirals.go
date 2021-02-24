@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/IsmaelPereira/telegram-bot-isma/types"
+	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
 type AdmiralJSON struct {

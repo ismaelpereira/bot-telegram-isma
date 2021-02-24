@@ -4,9 +4,10 @@ import (
 	"log"
 	"strings"
 
-	"github.com/IsmaelPereira/telegram-bot-isma/config"
-	"github.com/IsmaelPereira/telegram-bot-isma/handler"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/ismaelpereira/telegram-bot-isma/bot/controllers"
+	"github.com/ismaelpereira/telegram-bot-isma/config"
+	"github.com/ismaelpereira/telegram-bot-isma/handler"
 )
 
 func main() {
@@ -17,18 +18,23 @@ func main() {
 
 func run() error {
 	c := config.Load()
-
 	bot, err := tgbotapi.NewBotAPI(c.Telegram.Key)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
 	updates, err := bot.GetUpdatesChan(u)
+	if err != nil {
+		return err
+	}
+	go controllers.ReminderCheck(bot)
 	for update := range updates {
 		if err := handleUpdate(c, bot, &update); err != nil {
-			log.Println(err)
-			continue
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

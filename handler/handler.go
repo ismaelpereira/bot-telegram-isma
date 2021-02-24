@@ -3,10 +3,11 @@ package handler
 import (
 	"strings"
 
-	"github.com/IsmaelPereira/telegram-bot-isma/bot/controllers"
-	"github.com/IsmaelPereira/telegram-bot-isma/config"
-	"github.com/IsmaelPereira/telegram-bot-isma/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+
+	"github.com/ismaelpereira/telegram-bot-isma/bot/controllers"
+	"github.com/ismaelpereira/telegram-bot-isma/config"
+	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
 //VerifyAndExecuteCommand is a function to pick the right command and execute the respective function

@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IsmaelPereira/telegram-bot-isma/api/clients"
-	"github.com/IsmaelPereira/telegram-bot-isma/bot/msgs"
-	"github.com/IsmaelPereira/telegram-bot-isma/config"
-	"github.com/IsmaelPereira/telegram-bot-isma/types"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/ismaelpereira/telegram-bot-isma/api/clients"
+	"github.com/ismaelpereira/telegram-bot-isma/bot/msgs"
+	"github.com/ismaelpereira/telegram-bot-isma/config"
+	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
 var TVShowMenu = make(map[int64][]types.TVShow)

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 type Config struct {
@@ -42,4 +44,12 @@ func Load() *Config {
 	var configDecoded Config
 	err = json.Unmarshal(configEncoded, &configDecoded)
 	return &configDecoded
+}
+
+func StartRedis() (redis.Conn, error) {
+	conn, err := redis.Dial("tcp", ":6379")
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
 }

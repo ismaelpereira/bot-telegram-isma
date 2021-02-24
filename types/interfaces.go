@@ -1,8 +1,8 @@
 package types
 
 import (
-	"github.com/IsmaelPereira/telegram-bot-isma/config"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/ismaelpereira/telegram-bot-isma/config"
 )
 
 type HandlerFunc func(*config.Config, *tgbotapi.BotAPI, *tgbotapi.Update) error

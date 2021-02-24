@@ -105,14 +105,15 @@ func nowHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 
 func reminderHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	//1 minute eat
-	commandSplited := strings.Fields(strings.ToLower(strings.ToLower(update.Message.CommandArguments())))
+	commandSplited := strings.SplitAfterN(strings.ToLower(strings.ToLower(update.Message.CommandArguments())), " ", 3)
 	if len(commandSplited) < 3 {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
 			"Você digitou o comando errado. Não foi possível completar a solicitação")
 		_, err := bot.Send(msg)
 		return err
 	}
-	value := commandSplited[0]
+
+	value := strings.TrimSpace(commandSplited[0])
 	t, err := strconv.Atoi(value)
 	if err != nil {
 		return err
@@ -123,8 +124,8 @@ func reminderHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		_, err := bot.Send(msg)
 		return err
 	}
-	measureOfTime := commandSplited[1]
-	text := commandSplited[2]
+	measureOfTime := strings.TrimSpace(commandSplited[1])
+	message := commandSplited[2]
 	var expireTime time.Time
 	if measureOfTime == "seconds" {
 		duration, err := time.ParseDuration(value + "s")
@@ -148,12 +149,12 @@ func reminderHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		expireTime = time.Now().Add(duration)
 	}
 	conn, err := config.StartRedis()
-	_, err = conn.Do("HMSET", "telegram:reminder:"+expireTime.Format("2006:01:02:15:04:05"), "chatID", update.Message.Chat.ID, "text", text)
+	_, err = conn.Do("HMSET", "telegram:reminder:"+expireTime.Format("2006:01:02:15:04:05"), "chatID", update.Message.Chat.ID, "text", message)
 	if err != nil {
 		return err
 	}
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID,
-		"Lembrete criado com sucesso! \nPara: "+expireTime.Format("2006:01:02:15:04:05")+"\nCom o texto: "+text)
+		"Lembrete criado com sucesso! \nPara: "+expireTime.Format("2006:01:02:15:04:05")+"\nCom o texto: "+message)
 	_, err = bot.Send(msg)
 	return err
 }
@@ -165,26 +166,28 @@ func reminderWorker(bot *tgbotapi.BotAPI) error {
 		return err
 	}
 	spew.Dump(keys)
-	sort.Strings(keys)
-	now := "telegram:reminder:" + time.Now().Format("2006:01:02:15:04:05")
-	for _, key := range keys {
-		if key <= now {
-			data, err := redis.StringMap(conn.Do("HGETALL", key))
-			if err != nil {
-				return err
-			}
-			if data != nil && data["chatID"] != "" && data["text"] != "" {
-				chatID, err := strconv.ParseInt(data["chatID"], 10, 64)
+	if len(keys) != 0 {
+		sort.Strings(keys)
+		now := "telegram:reminder:" + time.Now().Format("2006:01:02:15:04:05")
+		for _, key := range keys {
+			if key <= now {
+				data, err := redis.StringMap(conn.Do("HGETALL", key))
 				if err != nil {
 					return err
 				}
-				msg := tgbotapi.NewMessage(chatID, msgs.IconAlarmClock+data["text"])
-				_, err = bot.Send(msg)
-				if err != nil {
-					return err
+				if data != nil && data["chatID"] != "" && data["text"] != "" {
+					chatID, err := strconv.ParseInt(data["chatID"], 10, 64)
+					if err != nil {
+						return err
+					}
+					msg := tgbotapi.NewMessage(chatID, msgs.IconAlarmClock+data["text"])
+					_, err = bot.Send(msg)
+					if err != nil {
+						return err
+					}
+					conn.Do("DEL", key)
+					return nil
 				}
-				conn.Do("DEL", key)
-				return nil
 			}
 		}
 	}
@@ -194,5 +197,6 @@ func reminderWorker(bot *tgbotapi.BotAPI) error {
 func ReminderCheck(bot *tgbotapi.BotAPI) {
 	for {
 		reminderWorker(bot)
+
 	}
 }

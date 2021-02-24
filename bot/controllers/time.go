@@ -84,7 +84,7 @@ func nowHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 			hour = time.Now().Add(-time.Minute * duration).Add(-time.Hour * 3)
 		}
 		if measureOfTime == "hours" {
-			duration, err := time.ParseDuration(value + "s")
+			duration, err := time.ParseDuration(value + "h")
 			if err != nil {
 				return err
 			}
@@ -142,7 +142,7 @@ func reminderHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		expireTime = time.Now().Add(duration)
 	}
 	if measureOfTime == "hours" {
-		duration, err := time.ParseDuration(value + "s")
+		duration, err := time.ParseDuration(value + "h")
 		if err != nil {
 			return err
 		}

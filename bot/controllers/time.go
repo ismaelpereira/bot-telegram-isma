@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/gomodule/redigo/redis"
 	"github.com/ismaelpereira/telegram-bot-isma/bot/msgs"
@@ -104,7 +103,6 @@ func nowHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 }
 
 func reminderHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
-	//1 minute eat
 	commandSplited := strings.SplitAfterN(strings.ToLower(strings.ToLower(update.Message.CommandArguments())), " ", 3)
 	if len(commandSplited) < 3 {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
@@ -132,21 +130,21 @@ func reminderHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		if err != nil {
 			return err
 		}
-		expireTime = time.Now().Add(duration)
+		expireTime = time.Now().Add(duration) //.Add(-time.Second * 3)
 	}
 	if measureOfTime == "minutes" {
 		duration, err := time.ParseDuration(value + "m")
 		if err != nil {
 			return err
 		}
-		expireTime = time.Now().Add(duration)
+		expireTime = time.Now().Add(duration) //.Add(-time.Minute * 3)
 	}
 	if measureOfTime == "hours" {
 		duration, err := time.ParseDuration(value + "h")
 		if err != nil {
 			return err
 		}
-		expireTime = time.Now().Add(duration)
+		expireTime = time.Now().Add(duration) //.Add(-time.Hour * 3)
 	}
 	conn, err := config.StartRedis()
 	_, err = conn.Do("HMSET", "telegram:reminder:"+expireTime.Format("2006:01:02:15:04:05"), "chatID", update.Message.Chat.ID, "text", message)
@@ -154,18 +152,20 @@ func reminderHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		return err
 	}
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID,
-		"Lembrete criado com sucesso! \nPara: "+expireTime.Format("2006:01:02:15:04:05")+"\nCom o texto: "+message)
-	_, err = bot.Send(msg)
+		"Lembrete criado com sucesso! \nPara: "+expireTime.Format("02/01/2006 - 15:04:05")+"\nCom o texto: "+message)
+	_, err = bot.Send(msg) //
 	return err
 }
 
 func reminderWorker(bot *tgbotapi.BotAPI) error {
 	conn, err := config.StartRedis()
+	if err != nil {
+		return err
+	}
 	keys, err := redis.Strings(conn.Do("KEYS", "telegram:reminder:*"))
 	if err != nil {
 		return err
 	}
-	spew.Dump(keys)
 	if len(keys) != 0 {
 		sort.Strings(keys)
 		now := "telegram:reminder:" + time.Now().Format("2006:01:02:15:04:05")
@@ -197,6 +197,5 @@ func reminderWorker(bot *tgbotapi.BotAPI) error {
 func ReminderCheck(bot *tgbotapi.BotAPI) {
 	for {
 		reminderWorker(bot)
-
 	}
 }

@@ -47,7 +47,7 @@ func Load() *Config {
 }
 
 func StartRedis() (redis.Conn, error) {
-	conn, err := redis.Dial("tcp", "redis:6379")
+	conn, err := redis.Dial("tcp", ":6379")
 	if err != nil {
 		return nil, err
 	}

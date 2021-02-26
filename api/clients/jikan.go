@@ -11,7 +11,9 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
-type AnimeApi struct{}
+type AnimeApi struct {
+	title string
+}
 
 type MangaApi struct {
 	title string

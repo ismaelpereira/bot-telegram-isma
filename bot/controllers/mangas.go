@@ -25,12 +25,12 @@ func MangasHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi
 		return err
 	}
 	for _, manga := range searchResults.Results {
-		getMangasPictureAndSendMessage(manga, update, bot)
+		getMangasPictureAndSendMessage(bot, update, &manga)
 	}
 	return nil
 }
 
-func getMangasPictureAndSendMessage(m types.Manga, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
+func getMangasPictureAndSendMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update, m *types.Manga) error {
 	mMessage := tgbotapi.NewPhotoShare(update.Message.Chat.ID, m.CoverPicture)
 	volumesNumber := strconv.Itoa(m.Volumes)
 	chaptersNumber := strconv.Itoa(m.Chapters)

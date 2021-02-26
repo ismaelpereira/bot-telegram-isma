@@ -3,17 +3,23 @@ package controllers
 import (
 	"strconv"
 	"strings"
-	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/ismaelpereira/telegram-bot-isma/api/clients"
 	"github.com/ismaelpereira/telegram-bot-isma/bot/msgs"
-	"github.com/ismaelpereira/telegram-bot-isma/cache"
 	"github.com/ismaelpereira/telegram-bot-isma/config"
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
-var apiCache cache.Cache
+var moneyAPI clients.MoneyAPI
+
+func init() {
+	var err error
+	moneyAPI, err = clients.NewMoneyAPI("f00d43c4c9c611a1d70a95bdcc5392ac")
+	if err != nil {
+		panic(err)
+	}
+}
 
 //MoneyHandleUpdate send the money message
 func MoneyHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
@@ -50,20 +56,14 @@ func MoneyHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.
 		return nil
 	}
 	var moneyResults *types.MoneySearchResult
-	var moneyRequest clients.MoneyApi
 	if err != nil {
 		return err
 	}
-	if temp := apiCache.Get(time.Now()); temp != nil {
-		moneyResults = temp.(*types.MoneySearchResult)
-	}
 	if moneyResults == nil {
-		moneyRequest.ApiKey = c.MoneyAcessKey.Key
-		moneyResults, err = moneyRequest.GetCurrencies()
+		moneyResults, err = moneyAPI.GetCurrencies()
 		if err != nil {
 			return err
 		}
-		apiCache.Set(time.Now().Add(time.Hour), moneyResults)
 	}
 	if !strings.EqualFold(commandSplit[1], "EUR") && !strings.EqualFold(commandSplit[2], "EUR") {
 		currency := ((1 / moneyResults.Rates[commandSplit[1]]) * moneyResults.Rates[commandSplit[2]]) * amount

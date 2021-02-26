@@ -29,6 +29,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	log.Println("bot started")
 	go controllers.ReminderCheck(bot)
 	for update := range updates {
 		if err := handleUpdate(c, bot, &update); err != nil {
@@ -42,6 +43,7 @@ func run() error {
 
 func handleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	if update.CallbackQuery != nil {
+		log.Printf("got callback query\n")
 		handler.CallbackActions(c, bot, update)
 	}
 	if update.Message == nil || !update.Message.IsCommand() {

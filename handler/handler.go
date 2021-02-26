@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -12,6 +13,7 @@ import (
 
 //VerifyAndExecuteCommand is a function to pick the right command and execute the respective function
 func VerifyAndExecuteCommand(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update, cmd string) error {
+	log.Printf("got cmd %q\n", cmd)
 	Commands := map[string]types.HandlerFunc{
 		"help":     controllers.HelpHandlerUpdate,
 		"admirals": controllers.AdmiralsHandleUpdate,

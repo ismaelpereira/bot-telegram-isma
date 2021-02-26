@@ -1,6 +1,11 @@
 version: "3"
 
 services:
+  telegram-bot:
+    build:
+      context: ./
+    restart: unless-stopped
+
   redis:
     image: redis
     ports:

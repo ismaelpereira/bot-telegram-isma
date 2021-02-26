@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -147,6 +148,9 @@ func reminderHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		expireTime = time.Now().Add(duration) //.Add(-time.Hour * 3)
 	}
 	conn, err := config.StartRedis()
+	if err != nil {
+		return err
+	}
 	_, err = conn.Do("HMSET", "telegram:reminder:"+expireTime.Format("2006:01:02:15:04:05"), "chatID", update.Message.Chat.ID, "text", message)
 	if err != nil {
 		return err
@@ -171,6 +175,7 @@ func reminderWorker(bot *tgbotapi.BotAPI) error {
 		now := "telegram:reminder:" + time.Now().Format("2006:01:02:15:04:05")
 		for _, key := range keys {
 			if key <= now {
+				log.Printf("got reminder with key %q\n", key)
 				data, err := redis.StringMap(conn.Do("HGETALL", key))
 				if err != nil {
 					return err

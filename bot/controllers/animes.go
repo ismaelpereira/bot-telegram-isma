@@ -12,7 +12,7 @@ import (
 )
 
 //AnimeHandleUpdate is a function for anime work
-func AnimesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func AnimesHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	animeName := strings.TrimSpace(update.Message.CommandArguments())
 	if animeName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAnimes)

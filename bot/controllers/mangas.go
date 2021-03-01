@@ -12,7 +12,7 @@ import (
 )
 
 //MangaHandleUpdate is a function for manga work
-func MangasHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func MangasHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	mangaName := strings.TrimSpace(update.Message.CommandArguments())
 	if mangaName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgMangas)

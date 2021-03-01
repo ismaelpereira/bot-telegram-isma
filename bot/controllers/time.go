@@ -13,7 +13,7 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/config"
 )
 
-func TimerHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func TimerHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	if update.Message.Command() == "reminder" {
 		if update.Message.CommandArguments() == "" {
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgReminder)
@@ -28,13 +28,13 @@ func TimerHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.
 			_, err := bot.Send(msg)
 			return err
 		}
-		return nowHandler(bot, update)
+		return nowHandler(cfg, bot, update)
 	}
 	return nil
 }
 
-func nowHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
-	commandSplited := strings.Fields(strings.ToLower(strings.ToLower(update.Message.CommandArguments())))
+func nowHandler(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+	commandSplited := strings.Fields(strings.ToLower(update.Message.CommandArguments()))
 	if len(commandSplited) != 3 {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
 			"Você digitou o comando errado. Não foi possível completar a solicitação")
@@ -51,21 +51,21 @@ func nowHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 			if err != nil {
 				return err
 			}
-			hour = time.Now().Add(duration).Add(-time.Hour * 3)
+			hour = time.Now().Add(duration) //.Add(-time.Hour * 3)
 		}
 		if measureOfTime == "minutes" {
 			duration, err := time.ParseDuration(value + "m")
 			if err != nil {
 				return err
 			}
-			hour = time.Now().Add(duration).Add(-time.Hour * 3)
+			hour = time.Now().Add(duration) //.Add(-time.Hour * 3)
 		}
 		if measureOfTime == "hours" {
 			duration, err := time.ParseDuration(value + "h")
 			if err != nil {
 				return err
 			}
-			hour = time.Now().Add(duration).Add(-time.Hour * 3)
+			hour = time.Now().Add(duration) //.Add(-time.Hour * 3)
 		}
 	}
 	if operation == "minus" {
@@ -74,7 +74,7 @@ func nowHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 			if err != nil {
 				return err
 			}
-			hour = time.Now().Add(-time.Second * duration).Add(-time.Hour * 3)
+			hour = time.Now().Add(-time.Second * duration) //.Add(-time.Hour * 3)
 		}
 		if measureOfTime == "minutes" {
 			duration, err := time.ParseDuration(value + "m")
@@ -88,7 +88,7 @@ func nowHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 			if err != nil {
 				return err
 			}
-			hour = time.Now().Add(-time.Hour * duration).Add(-time.Hour * 3)
+			hour = time.Now().Add(-time.Hour * duration) //.Add(-time.Hour * 3)
 		}
 	}
 	if operation != "plus" && operation != "minus" {
@@ -104,14 +104,13 @@ func nowHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 }
 
 func reminderHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
-	commandSplited := strings.SplitAfterN(strings.ToLower(strings.ToLower(update.Message.CommandArguments())), " ", 3)
+	commandSplited := strings.SplitAfterN(strings.ToLower(update.Message.CommandArguments()), " ", 3)
 	if len(commandSplited) < 3 {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
 			"Você digitou o comando errado. Não foi possível completar a solicitação")
 		_, err := bot.Send(msg)
 		return err
 	}
-
 	value := strings.TrimSpace(commandSplited[0])
 	t, err := strconv.Atoi(value)
 	if err != nil {
@@ -157,7 +156,7 @@ func reminderHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	}
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID,
 		"Lembrete criado com sucesso! \nPara: "+expireTime.Format("02/01/2006 - 15:04:05")+"\nCom o texto: "+message)
-	_, err = bot.Send(msg) //
+	_, err = bot.Send(msg)
 	return err
 }
 

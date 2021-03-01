@@ -12,9 +12,9 @@ import (
 )
 
 //VerifyAndExecuteCommand is a function to pick the right command and execute the respective function
-func VerifyAndExecuteCommand(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update, cmd string) error {
+func VerifyAndExecuteCommand(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update, cmd string) error {
 	log.Printf("got cmd %q\n", cmd)
-	Commands := map[string]types.HandlerFunc{
+	Commands := map[string]types.Handler{
 		"help":     controllers.HelpHandlerUpdate,
 		"admirals": controllers.AdmiralsHandleUpdate,
 		"animes":   controllers.AnimesHandleUpdate,
@@ -26,19 +26,19 @@ func VerifyAndExecuteCommand(c *config.Config, bot *tgbotapi.BotAPI, update *tgb
 		"now":      controllers.TimerHandleUpdate,
 	}
 	if f, ok := Commands[cmd]; ok {
-		return f(c, bot, update)
+		return f(cfg, bot, update)
 	}
-	return controllers.NotFoundHandlerUpdate(c, bot, update)
+	return controllers.NotFoundHandlerUpdate(bot, update)
 }
 
-func CallbackActions(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func CallbackActions(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	if strings.HasPrefix(update.CallbackQuery.Data, "tvshows:") {
 		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "tvshows:")
-		return controllers.SeriesHandleUpdate(c, bot, update)
+		return controllers.SeriesHandleUpdate(cfg, bot, update)
 	}
 	if strings.HasPrefix(update.CallbackQuery.Data, "movies:") {
 		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "movies:")
-		return controllers.MoviesHandleUpdate(c, bot, update)
+		return controllers.MoviesHandleUpdate(cfg, bot, update)
 	}
 	return nil
 }

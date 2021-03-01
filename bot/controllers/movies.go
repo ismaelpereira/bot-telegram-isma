@@ -22,7 +22,7 @@ var MoviesMenu = make(map[int64][]types.Movie)
 var MoviesSearch clients.MovieDB
 
 //MovieHandleUpdate send the movie message
-func MoviesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func MoviesHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	if update.CallbackQuery == nil {
 		movieName := strings.TrimSpace(update.Message.CommandArguments())
 		if movieName == "" {
@@ -30,7 +30,7 @@ func MoviesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi
 			_, err := bot.Send(msg)
 			return err
 		}
-		MoviesSearch.ApiKey = c.MovieAcessKey.Key
+		MoviesSearch.ApiKey = cfg.MovieAcessKey.Key
 		moviesResults, err := MoviesSearch.SearchMovie(movieName)
 		if err != nil {
 			return err
@@ -52,7 +52,7 @@ func MoviesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi
 			v[0].Providers = *moviesProviders
 			v[0].Details = *moviesDetails
 			v[0].Credits = *moviesCredits
-			movieMessage, err := getMoviesPictureAndSendMessage(c, bot, update, v[0])
+			movieMessage, err := getMoviesPictureAndSendMessage(cfg, bot, update, v[0])
 			if err != nil {
 				return err
 			}
@@ -74,10 +74,10 @@ func MoviesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi
 		}
 		return nil
 	}
-	return movieArrowButtonsAction(c, bot, update)
+	return movieArrowButtonsAction(cfg, bot, update)
 }
 
-func movieArrowButtonsAction(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func movieArrowButtonsAction(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	i, err := strconv.Atoi(update.CallbackQuery.Data)
 	if err != nil {
 		return err
@@ -95,7 +95,7 @@ func movieArrowButtonsAction(c *config.Config, bot *tgbotapi.BotAPI, update *tgb
 		v[i].Details = *moviesDetails
 		moviesCredits, err := MoviesSearch.GetMovieCredits(strconv.Itoa(v[i].ID))
 		v[i].Credits = *moviesCredits
-		movieMessage, err := getMoviesPictureAndSendMessage(c, bot, update, v[i])
+		movieMessage, err := getMoviesPictureAndSendMessage(cfg, bot, update, v[i])
 		if err != nil {
 			return err
 		}
@@ -127,8 +127,7 @@ func movieArrowButtonsAction(c *config.Config, bot *tgbotapi.BotAPI, update *tgb
 		if err != nil {
 			return err
 		}
-
-		sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(c.Telegram.Key)+"/editMessageMedia",
+		sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(cfg.Telegram.Key)+"/editMessageMedia",
 			"application/json", bytes.NewBuffer(messageJSON))
 		if err != nil {
 			return err
@@ -141,7 +140,7 @@ func movieArrowButtonsAction(c *config.Config, bot *tgbotapi.BotAPI, update *tgb
 	return nil
 }
 
-func getMoviesPictureAndSendMessage(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update, mov types.Movie) (*tgbotapi.PhotoConfig, error) {
+func getMoviesPictureAndSendMessage(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update, mov types.Movie) (*tgbotapi.PhotoConfig, error) {
 	var moviesDetailsMessage []string
 	releaseDate, err := time.Parse("2006-01-02", mov.ReleaseDate)
 	if err != nil {
@@ -224,7 +223,5 @@ func getMovieDirector(mov types.Movie) []string {
 			directors = append(directors, crew.Name)
 		}
 	}
-	// separators := strings.Count(strings.Join(directors, ""), ".")
-	// directorString := strings.Replace(strings.Join(directors, ""), ".", ",", separators-1)
 	return directors
 }

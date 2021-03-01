@@ -20,7 +20,7 @@ import (
 var TVShowMenu = make(map[int64][]types.TVShow)
 var TvShowSearch clients.TVShowDB
 
-func SeriesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func SeriesHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	if update.CallbackQuery == nil {
 		tvShowName := strings.TrimSpace(update.Message.CommandArguments())
 		if tvShowName == "" {
@@ -28,7 +28,7 @@ func SeriesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi
 			_, err := bot.Send(msg)
 			return err
 		}
-		TvShowSearch.ApiKey = c.MovieAcessKey.Key
+		TvShowSearch.ApiKey = cfg.MovieAcessKey.Key
 		tvShowResults, err := TvShowSearch.SearchTVShow(tvShowName)
 		if err != nil {
 			return err
@@ -45,7 +45,7 @@ func SeriesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi
 			}
 			v[0].TVShowDetails = *tvShowDetails
 			v[0].Providers = *tvShowProviders
-			tvShowMessage, err := getTVShowPictureAndSendMessage(c, bot, update, v[0])
+			tvShowMessage, err := getTVShowPictureAndSendMessage(cfg, bot, update, v[0])
 			if err != nil {
 				return err
 			}
@@ -78,12 +78,12 @@ func SeriesHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi
 		return nil
 	}
 	if strings.HasPrefix(update.CallbackQuery.Data, "seasons:") {
-		return hasCallback(c, update)
+		return hasCallback(cfg, update)
 	}
-	return tvShowArrowButtonsAction(c, bot, update)
+	return tvShowArrowButtonsAction(cfg, bot, update)
 }
 
-func hasCallback(c *config.Config, update *tgbotapi.Update) error {
+func hasCallback(cfg *config.Config, update *tgbotapi.Update) error {
 	update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "seasons:")
 	if strings.Contains(update.CallbackQuery.Data, ":") {
 		lastBin := strings.Index(update.CallbackQuery.Data, ":")
@@ -124,7 +124,7 @@ func hasCallback(c *config.Config, update *tgbotapi.Update) error {
 			if err != nil {
 				return err
 			}
-			sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(c.Telegram.Key)+"/editmessagemedia",
+			sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(cfg.Telegram.Key)+"/editmessagemedia",
 				"application/json", bytes.NewBuffer(messageJSON))
 			if err != nil {
 				return err
@@ -142,12 +142,12 @@ func hasCallback(c *config.Config, update *tgbotapi.Update) error {
 		return err
 	}
 	if v, ok := TVShowMenu[update.CallbackQuery.Message.Chat.ID]; ok && len(v) != 0 {
-		return sendSeasonKeyboard(c, update, v[i])
+		return sendSeasonKeyboard(cfg, update, v[i])
 	}
 	return nil
 }
 
-func tvShowArrowButtonsAction(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func tvShowArrowButtonsAction(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	i, err := strconv.Atoi(update.CallbackQuery.Data)
 	if err != nil {
 		return err
@@ -163,7 +163,7 @@ func tvShowArrowButtonsAction(c *config.Config, bot *tgbotapi.BotAPI, update *tg
 		}
 		v[i].TVShowDetails = *tvShowDetails
 		v[i].Providers = *tvShowProviders
-		tvShowMessage, err := getTVShowPictureAndSendMessage(c, bot, update, v[i])
+		tvShowMessage, err := getTVShowPictureAndSendMessage(cfg, bot, update, v[i])
 		if err != nil {
 			return err
 		}
@@ -198,7 +198,7 @@ func tvShowArrowButtonsAction(c *config.Config, bot *tgbotapi.BotAPI, update *tg
 		if err != nil {
 			return err
 		}
-		sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(c.Telegram.Key)+"/editmessagemedia",
+		sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(cfg.Telegram.Key)+"/editmessagemedia",
 			"application/json", bytes.NewBuffer(messageJSON))
 		if err != nil {
 			return err
@@ -212,7 +212,7 @@ func tvShowArrowButtonsAction(c *config.Config, bot *tgbotapi.BotAPI, update *tg
 	return nil
 }
 
-func sendSeasonKeyboard(c *config.Config, update *tgbotapi.Update, tvShow types.TVShow) error {
+func sendSeasonKeyboard(cfg *config.Config, update *tgbotapi.Update, tvShow types.TVShow) error {
 	i, err := strconv.Atoi(update.CallbackQuery.Data)
 	if err != nil {
 		return err
@@ -242,7 +242,7 @@ func sendSeasonKeyboard(c *config.Config, update *tgbotapi.Update, tvShow types.
 	if err != nil {
 		return err
 	}
-	sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(c.Telegram.Key)+"/editMessageMedia",
+	sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(cfg.Telegram.Key)+"/editMessageMedia",
 		"application/json", bytes.NewBuffer(messageJSON))
 	if err != nil {
 		return err
@@ -254,7 +254,7 @@ func sendSeasonKeyboard(c *config.Config, update *tgbotapi.Update, tvShow types.
 	return nil
 }
 
-func getTVShowPictureAndSendMessage(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update, tvShow types.TVShow) (*tgbotapi.PhotoConfig, error) {
+func getTVShowPictureAndSendMessage(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update, tvShow types.TVShow) (*tgbotapi.PhotoConfig, error) {
 	var tvShowDetailsMessage []string
 	releaseDate, err := time.Parse("2006-01-02", tvShow.ReleaseDate)
 	if err != nil {

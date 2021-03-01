@@ -15,7 +15,7 @@ import (
 var AdmiralDecoded []types.Admiral
 
 //AdmiralHandleUpdate is a function for admiral work
-func AdmiralsHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func AdmiralsHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	admiralName := strings.TrimSpace(update.Message.CommandArguments())
 	if admiralName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAdmirals)
@@ -23,9 +23,9 @@ func AdmiralsHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbota
 		return err
 	}
 	if AdmiralDecoded == nil {
-		var admirals clients.AdmiralJSON
-		admiralsPath := c.AdmiralPath.Path
 		var err error
+		var admirals clients.AdmiralJSON
+		admiralsPath := cfg.AdmiralPath.Path
 		AdmiralDecoded, err = admirals.GetAdmiral(admiralsPath)
 		if err != nil {
 			return err

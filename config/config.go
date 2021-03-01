@@ -1,12 +1,6 @@
 package config
 
-import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
-
-	"github.com/gomodule/redigo/redis"
-)
+import "github.com/gomodule/redigo/redis"
 
 type Config struct {
 	Telegram      TelegramKey `json:"telegram"`
@@ -29,21 +23,6 @@ type MoneyAPI struct {
 
 type MovieAPI struct {
 	Key string `json:"acessKey"`
-}
-
-func Load() *Config {
-	file, err := os.Open(os.Args[1])
-	if err != nil {
-		return nil
-	}
-	defer file.Close()
-	configEncoded, err := ioutil.ReadAll(file)
-	if err != nil {
-		return nil
-	}
-	var configDecoded Config
-	err = json.Unmarshal(configEncoded, &configDecoded)
-	return &configDecoded
 }
 
 func StartRedis() (redis.Conn, error) {

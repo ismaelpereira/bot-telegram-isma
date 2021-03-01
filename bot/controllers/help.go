@@ -7,7 +7,7 @@ import (
 )
 
 //HelpHandlerUpdate send the help message
-func HelpHandlerUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func HelpHandlerUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgHelp)
 	_, err := bot.Send(msg)
 	return err

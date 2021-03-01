@@ -14,15 +14,20 @@ import (
 var moneyAPI clients.MoneyAPI
 
 func init() {
+	var cfg *config.Config
 	var err error
-	moneyAPI, err = clients.NewMoneyAPI("f00d43c4c9c611a1d70a95bdcc5392ac")
+	cfg, err = config.Wire()
+	if err != nil {
+		panic(err)
+	}
+	moneyAPI, err = clients.NewMoneyAPI(cfg.MoneyAcessKey.Key)
 	if err != nil {
 		panic(err)
 	}
 }
 
 //MoneyHandleUpdate send the money message
-func MoneyHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func MoneyHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	command := strings.ToUpper(update.Message.CommandArguments())
 	commandSplit := strings.Fields(command)
 	if command == "" {
@@ -56,9 +61,6 @@ func MoneyHandleUpdate(c *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.
 		return nil
 	}
 	var moneyResults *types.MoneySearchResult
-	if err != nil {
-		return err
-	}
 	if moneyResults == nil {
 		moneyResults, err = moneyAPI.GetCurrencies()
 		if err != nil {

@@ -10,6 +10,9 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
+type moneyAPI struct {
+	apiKey string
+}
 type MoneyAPI interface {
 	GetCurrencies() (*types.MoneySearchResult, error)
 }
@@ -20,10 +23,6 @@ func NewMoneyAPI(apiKey string) (MoneyAPI, error) {
 			apiKey: apiKey,
 		},
 	}, nil
-}
-
-type moneyAPI struct {
-	apiKey string
 }
 
 func (t *moneyAPI) GetCurrencies() (*types.MoneySearchResult, error) {
@@ -44,8 +43,6 @@ func (t *moneyAPI) GetCurrencies() (*types.MoneySearchResult, error) {
 	}
 	return &moneyCurrencies, nil
 }
-
-//////////////////////////////////////////////
 
 type moneyAPICached struct {
 	api   MoneyAPI

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -11,16 +12,29 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
-type AnimeApi struct {
+type animeAPI struct {
 	title string
 }
 
-type MangaApi struct {
+type AnimeAPI interface {
+	SearchAnime(string) (*types.AnimeResponse, error)
+}
+
+func NewAnimeAPI(animeName string) (AnimeAPI, error) {
+	return &animeAPICached{
+		api: &animeAPI{
+			title: animeName,
+		},
+	}, nil
+}
+
+type MangaAPI struct {
 	title string
 	ID    int
 }
 
-func (t *AnimeApi) SearchAnime(animeName string) (*types.AnimeResponse, error) {
+func (t *animeAPI) SearchAnime(animeName string) (*types.AnimeResponse, error) {
+	log.Println("anime api")
 	apiResult, err := http.Get("https://api.jikan.moe/v3/search/anime?q=" + url.QueryEscape(animeName) + "&page=1&limit=3")
 	if err != nil {
 		return nil, err
@@ -38,7 +52,7 @@ func (t *AnimeApi) SearchAnime(animeName string) (*types.AnimeResponse, error) {
 	return &animeSearchResults, nil
 }
 
-func (t *MangaApi) SearchManga(mangaName string) (*types.MangaResponse, error) {
+func (t *MangaAPI) SearchManga(mangaName string) (*types.MangaResponse, error) {
 	apiResult, err := http.Get("https://api.jikan.moe/v3/search/manga?q=" + url.QueryEscape(mangaName) + "&page=1&limit=3")
 	if err != nil {
 		return nil, err
@@ -56,7 +70,7 @@ func (t *MangaApi) SearchManga(mangaName string) (*types.MangaResponse, error) {
 	return &mangasSearchResults, nil
 }
 
-func (t *MangaApi) GetMangaPageDetails(mangaID string) ([]byte, string, error) {
+func (t *MangaAPI) GetMangaPageDetails(mangaID string) ([]byte, string, error) {
 	animeListURL, err := http.Get("https://myanimelist.net/manga/" + url.QueryEscape(mangaID))
 	if err != nil {
 		return nil, "", err
@@ -77,4 +91,22 @@ func (t *MangaApi) GetMangaPageDetails(mangaID string) ([]byte, string, error) {
 	endSt := strings.Index(string(myAnimeListPageCode)[startSt:], statusEndPosition)
 	status := strings.TrimSpace(string(myAnimeListPageCode)[startSt+len(statusStartPosition) : startSt+endSt])
 	return japaneseName, status, nil
+}
+
+type animeAPICached struct {
+	api   AnimeAPI
+	cache interface{}
+}
+
+func (t *animeAPICached) SearchAnime(animeName string) (*types.AnimeResponse, error) {
+	log.Println("anime api cached")
+	if t.cache != nil {
+		return t.cache.(*types.AnimeResponse), nil
+	}
+	res, err := t.api.SearchAnime(animeName)
+	if err != nil {
+		return nil, err
+	}
+	t.cache = res
+	return res, nil
 }

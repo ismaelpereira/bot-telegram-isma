@@ -12,7 +12,21 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
-var AdmiralDecoded []types.Admiral
+var admiralDecoded []types.Admiral
+var admiralAPI clients.AdmiralJSON
+
+func init() {
+	var cfg *config.Config
+	var err error
+	cfg, err = config.Wire()
+	if err != nil {
+		panic(err)
+	}
+	admiralAPI, err = clients.NewAdmiral(cfg.AdmiralPath.Path)
+	if err != nil {
+		panic(err)
+	}
+}
 
 //AdmiralHandleUpdate is a function for admiral work
 func AdmiralsHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
@@ -22,16 +36,11 @@ func AdmiralsHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbo
 		_, err := bot.Send(msg)
 		return err
 	}
-	if AdmiralDecoded == nil {
-		var err error
-		var admirals clients.AdmiralJSON
-		admiralsPath := cfg.AdmiralPath.Path
-		AdmiralDecoded, err = admirals.GetAdmiral(admiralsPath)
-		if err != nil {
-			return err
-		}
+	admiralDecoded, err := admiralAPI.GetAdmiral(cfg.AdmiralPath.Path)
+	if err != nil {
+		return err
 	}
-	for _, admiral := range AdmiralDecoded {
+	for _, admiral := range admiralDecoded {
 		if strings.EqualFold(admiral.AdmiralName, admiralName) || strings.EqualFold(admiral.RealName, admiralName) {
 			getAdmiralPictureAndSendMessage(admiral, update, bot)
 		}

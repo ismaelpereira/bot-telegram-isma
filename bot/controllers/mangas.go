@@ -19,7 +19,7 @@ func MangasHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbota
 		_, err := bot.Send(msg)
 		return err
 	}
-	var mangaSearch *clients.MangaApi
+	var mangaSearch *clients.MangaAPI
 	searchResults, err := mangaSearch.SearchManga(mangaName)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func getMangasPictureAndSendMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Updat
 	if chaptersNumber == "0" {
 		chaptersNumber = "?"
 	}
-	var mangaSearch *clients.MangaApi
+	var mangaSearch *clients.MangaAPI
 	japaneseName, status, err := mangaSearch.GetMangaPageDetails(strconv.Itoa(m.ID))
 	if err != nil {
 		return err

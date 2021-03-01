@@ -8,7 +8,6 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/api/clients"
 	"github.com/ismaelpereira/telegram-bot-isma/bot/msgs"
 	"github.com/ismaelpereira/telegram-bot-isma/config"
-	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
 var moneyAPI clients.MoneyAPI
@@ -60,13 +59,11 @@ func MoneyHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotap
 		}
 		return nil
 	}
-	var moneyResults *types.MoneySearchResult
-	if moneyResults == nil {
-		moneyResults, err = moneyAPI.GetCurrencies()
-		if err != nil {
-			return err
-		}
+	moneyResults, err := moneyAPI.GetCurrencies()
+	if err != nil {
+		return err
 	}
+
 	if !strings.EqualFold(commandSplit[1], "EUR") && !strings.EqualFold(commandSplit[2], "EUR") {
 		currency := ((1 / moneyResults.Rates[commandSplit[1]]) * moneyResults.Rates[commandSplit[2]]) * amount
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+

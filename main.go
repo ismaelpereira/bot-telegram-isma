@@ -19,7 +19,6 @@ func run() error {
 	}
 
 	a.Bot.Start()
-	a.Bot.Wait()
 
 	return nil
 }

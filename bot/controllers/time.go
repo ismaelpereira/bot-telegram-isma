@@ -7,20 +7,25 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-redis/redis/v7"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/gomodule/redigo/redis"
 	"github.com/ismaelpereira/telegram-bot-isma/bot/msgs"
 	"github.com/ismaelpereira/telegram-bot-isma/config"
 )
 
-func TimerHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func TimerHandleUpdate(
+	cfg *config.Config,
+	redis *redis.Client,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+) error {
 	if update.Message.Command() == "reminder" {
 		if update.Message.CommandArguments() == "" {
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgReminder)
 			_, err := bot.Send(msg)
 			return err
 		}
-		return reminderHandler(bot, update)
+		return reminderHandler(cfg, redis, bot, update)
 	}
 	if update.Message.Command() == "now" {
 		if strings.ToLower(update.Message.CommandArguments()) == "" {
@@ -103,7 +108,12 @@ func nowHandler(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Updat
 	return err
 }
 
-func reminderHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func reminderHandler(
+	cfg *config.Config,
+	redis *redis.Client,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+) error {
 	commandSplited := strings.SplitAfterN(strings.ToLower(update.Message.CommandArguments()), " ", 3)
 	if len(commandSplited) < 3 {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
@@ -146,12 +156,7 @@ func reminderHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 		}
 		expireTime = time.Now().Add(duration) //.Add(-time.Hour * 3)
 	}
-	conn, err := config.StartRedis()
-	if err != nil {
-		return err
-	}
-	_, err = conn.Do("HMSET", "telegram:reminder:"+expireTime.Format("2006:01:02:15:04:05"), "chatID", update.Message.Chat.ID, "text", message)
-	if err != nil {
+	if err := redis.HMSet("telegram:reminder:"+expireTime.Format("2006:01:02:15:04:05"), "chatID", update.Message.Chat.ID, "text", message).Err(); err != nil {
 		return err
 	}
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID,
@@ -160,37 +165,33 @@ func reminderHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	return err
 }
 
-func reminderWorker(bot *tgbotapi.BotAPI) error {
-	conn, err := config.StartRedis()
+func reminderWorker(bot *tgbotapi.BotAPI, redis *redis.Client) error {
+	keys, err := redis.Keys("telegram:reminder:*").Result()
 	if err != nil {
 		return err
 	}
-	keys, err := redis.Strings(conn.Do("KEYS", "telegram:reminder:*"))
-	if err != nil {
-		return err
-	}
-	if len(keys) != 0 {
-		sort.Strings(keys)
-		now := "telegram:reminder:" + time.Now().Format("2006:01:02:15:04:05")
-		for _, key := range keys {
-			if key <= now {
-				log.Printf("got reminder with key %q\n", key)
-				data, err := redis.StringMap(conn.Do("HGETALL", key))
+	sort.Strings(keys)
+	now := "telegram:reminder:" + time.Now().Format("2006:01:02:15:04:05")
+	for _, key := range keys {
+		if key <= now {
+			log.Printf("got reminder with key %q\n", key)
+			data, err := redis.HGetAll(key).Result()
+			if err != nil {
+				return err
+			}
+			if data != nil && data["chatID"] != "" && data["text"] != "" {
+				chatID, err := strconv.ParseInt(data["chatID"], 10, 64)
 				if err != nil {
 					return err
 				}
-				if data != nil && data["chatID"] != "" && data["text"] != "" {
-					chatID, err := strconv.ParseInt(data["chatID"], 10, 64)
-					if err != nil {
-						return err
-					}
-					msg := tgbotapi.NewMessage(chatID, msgs.IconAlarmClock+data["text"])
-					_, err = bot.Send(msg)
-					if err != nil {
-						return err
-					}
-					conn.Do("DEL", key)
-					return nil
+				msg := tgbotapi.NewMessage(chatID, msgs.IconAlarmClock+data["text"])
+				_, err = bot.Send(msg)
+				if err != nil {
+					return err
+				}
+				err = redis.Del(key).Err()
+				if err != nil {
+					return err
 				}
 			}
 		}
@@ -198,8 +199,8 @@ func reminderWorker(bot *tgbotapi.BotAPI) error {
 	return nil
 }
 
-func ReminderCheck(bot *tgbotapi.BotAPI) {
+func ReminderCheck(bot *tgbotapi.BotAPI, redis *redis.Client) {
 	for {
-		reminderWorker(bot)
+		reminderWorker(bot, redis)
 	}
 }

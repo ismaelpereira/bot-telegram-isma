@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-redis/redis/v7"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/ismaelpereira/telegram-bot-isma/api/clients"
 	"github.com/ismaelpereira/telegram-bot-isma/bot/msgs"
@@ -14,7 +15,12 @@ import (
 var animesSearch clients.AnimeAPI
 
 //AnimeHandleUpdate is a function for anime work
-func AnimesHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func AnimesHandleUpdate(
+	cfg *config.Config,
+	redis *redis.Client,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+) error {
 	animeName := strings.TrimSpace(update.Message.CommandArguments())
 	if animeName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAnimes)
@@ -35,7 +41,11 @@ func AnimesHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbota
 	return nil
 }
 
-func getAnimesPictureAndSendMessage(an types.Anime, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
+func getAnimesPictureAndSendMessage(
+	an types.Anime,
+	update *tgbotapi.Update,
+	bot *tgbotapi.BotAPI,
+) error {
 	anMessage := tgbotapi.NewPhotoShare(update.Message.Chat.ID, an.CoverPicture)
 	var airing string
 	if an.Airing == true {

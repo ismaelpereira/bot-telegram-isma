@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-redis/redis/v7"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/ismaelpereira/telegram-bot-isma/api/clients"
 	"github.com/ismaelpereira/telegram-bot-isma/bot/msgs"
@@ -29,7 +30,12 @@ func init() {
 }
 
 //AdmiralHandleUpdate is a function for admiral work
-func AdmiralsHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func AdmiralsHandleUpdate(
+	cfg *config.Config,
+	redis *redis.Client,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+) error {
 	admiralName := strings.TrimSpace(update.Message.CommandArguments())
 	if admiralName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAdmirals)
@@ -48,7 +54,11 @@ func AdmiralsHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbo
 	return nil
 }
 
-func getAdmiralPictureAndSendMessage(ad types.Admiral, update *tgbotapi.Update, bot *tgbotapi.BotAPI) error {
+func getAdmiralPictureAndSendMessage(
+	ad types.Admiral,
+	update *tgbotapi.Update,
+	bot *tgbotapi.BotAPI,
+) error {
 	adPicture, err := http.Get(ad.ProfilePicture)
 	if err != nil {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgServerError)

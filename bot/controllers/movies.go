@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-redis/redis/v7"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/ismaelpereira/telegram-bot-isma/api/clients"
 	"github.com/ismaelpereira/telegram-bot-isma/bot/msgs"
@@ -22,7 +23,12 @@ var MoviesMenu = make(map[int64][]types.Movie)
 var MoviesSearch clients.MovieDB
 
 //MovieHandleUpdate send the movie message
-func MoviesHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func MoviesHandleUpdate(
+	cfg *config.Config,
+	redis *redis.Client,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+) error {
 	if update.CallbackQuery == nil {
 		movieName := strings.TrimSpace(update.Message.CommandArguments())
 		if movieName == "" {
@@ -68,16 +74,17 @@ func MoviesHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbota
 				movieMessage.ReplyMarkup = kb[0]
 			}
 			_, err = bot.Send(movieMessage)
-			if err != nil {
-				return err
-			}
+			return err
 		}
-		return nil
 	}
 	return movieArrowButtonsAction(cfg, bot, update)
 }
 
-func movieArrowButtonsAction(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func movieArrowButtonsAction(
+	cfg *config.Config,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+) error {
 	i, err := strconv.Atoi(update.CallbackQuery.Data)
 	if err != nil {
 		return err
@@ -140,7 +147,12 @@ func movieArrowButtonsAction(cfg *config.Config, bot *tgbotapi.BotAPI, update *t
 	return nil
 }
 
-func getMoviesPictureAndSendMessage(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update, mov types.Movie) (*tgbotapi.PhotoConfig, error) {
+func getMoviesPictureAndSendMessage(
+	cfg *config.Config,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+	mov types.Movie,
+) (*tgbotapi.PhotoConfig, error) {
 	var moviesDetailsMessage []string
 	releaseDate, err := time.Parse("2006-01-02", mov.ReleaseDate)
 	if err != nil {

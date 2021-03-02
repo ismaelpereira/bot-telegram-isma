@@ -17,8 +17,6 @@ func run() error {
 	if err != nil {
 		return err
 	}
-
 	a.Bot.Start()
-
 	return nil
 }

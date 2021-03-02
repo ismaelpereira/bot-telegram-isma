@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-redis/redis/v7"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/ismaelpereira/telegram-bot-isma/api/clients"
 	"github.com/ismaelpereira/telegram-bot-isma/bot/msgs"
@@ -12,7 +13,12 @@ import (
 )
 
 //MangaHandleUpdate is a function for manga work
-func MangasHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func MangasHandleUpdate(
+	cfg *config.Config,
+	redis *redis.Client,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+) error {
 	mangaName := strings.TrimSpace(update.Message.CommandArguments())
 	if mangaName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgMangas)
@@ -30,7 +36,11 @@ func MangasHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbota
 	return nil
 }
 
-func getMangasPictureAndSendMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update, m *types.Manga) error {
+func getMangasPictureAndSendMessage(
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+	m *types.Manga,
+) error {
 	mMessage := tgbotapi.NewPhotoShare(update.Message.Chat.ID, m.CoverPicture)
 	volumesNumber := strconv.Itoa(m.Volumes)
 	chaptersNumber := strconv.Itoa(m.Chapters)

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-redis/redis/v7"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/ismaelpereira/telegram-bot-isma/api/clients"
 	"github.com/ismaelpereira/telegram-bot-isma/bot/msgs"
@@ -20,7 +21,12 @@ import (
 var TVShowMenu = make(map[int64][]types.TVShow)
 var TvShowSearch clients.TVShowDB
 
-func SeriesHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func SeriesHandleUpdate(
+	cfg *config.Config,
+	redis *redis.Client,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+) error {
 	if update.CallbackQuery == nil {
 		tvShowName := strings.TrimSpace(update.Message.CommandArguments())
 		if tvShowName == "" {
@@ -71,11 +77,8 @@ func SeriesHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbota
 				)
 			}
 			_, err = bot.Send(tvShowMessage)
-			if err != nil {
-				return err
-			}
+			return err
 		}
-		return nil
 	}
 	if strings.HasPrefix(update.CallbackQuery.Data, "seasons:") {
 		return hasCallback(cfg, update)
@@ -147,7 +150,11 @@ func hasCallback(cfg *config.Config, update *tgbotapi.Update) error {
 	return nil
 }
 
-func tvShowArrowButtonsAction(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func tvShowArrowButtonsAction(
+	cfg *config.Config,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+) error {
 	i, err := strconv.Atoi(update.CallbackQuery.Data)
 	if err != nil {
 		return err
@@ -212,7 +219,10 @@ func tvShowArrowButtonsAction(cfg *config.Config, bot *tgbotapi.BotAPI, update *
 	return nil
 }
 
-func sendSeasonKeyboard(cfg *config.Config, update *tgbotapi.Update, tvShow types.TVShow) error {
+func sendSeasonKeyboard(cfg *config.Config,
+	update *tgbotapi.Update,
+	tvShow types.TVShow,
+) error {
 	i, err := strconv.Atoi(update.CallbackQuery.Data)
 	if err != nil {
 		return err
@@ -254,7 +264,12 @@ func sendSeasonKeyboard(cfg *config.Config, update *tgbotapi.Update, tvShow type
 	return nil
 }
 
-func getTVShowPictureAndSendMessage(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update, tvShow types.TVShow) (*tgbotapi.PhotoConfig, error) {
+func getTVShowPictureAndSendMessage(
+	cfg *config.Config,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+	tvShow types.TVShow,
+) (*tgbotapi.PhotoConfig, error) {
 	var tvShowDetailsMessage []string
 	releaseDate, err := time.Parse("2006-01-02", tvShow.ReleaseDate)
 	if err != nil {

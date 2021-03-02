@@ -6,8 +6,10 @@
 package app
 
 import (
+	redis2 "github.com/go-redis/redis/v7"
 	"github.com/ismaelpereira/telegram-bot-isma/bot"
 	"github.com/ismaelpereira/telegram-bot-isma/config"
+	"github.com/ismaelpereira/telegram-bot-isma/redis"
 )
 
 // Injectors from app.go:
@@ -17,11 +19,15 @@ func Build() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	botBot, err := bot.Wire(configConfig)
+	client, err := redis.Wire(configConfig)
 	if err != nil {
 		return nil, err
 	}
-	app, err := Wire(configConfig, botBot)
+	botBot, err := bot.Wire(configConfig, client)
+	if err != nil {
+		return nil, err
+	}
+	app, err := Wire(configConfig, client, botBot)
 	if err != nil {
 		return nil, err
 	}
@@ -32,14 +38,17 @@ func Build() (*App, error) {
 
 type App struct {
 	Config *config.Config
+	Redis  *redis2.Client
 	Bot    *bot.Bot
 }
 
 func Wire(
-	cfg *config.Config, bot2 *bot.Bot,
+	cfg *config.Config,
+	client *redis2.Client, bot2 *bot.Bot,
 ) (*App, error) {
 	return &App{
 		Config: cfg,
+		Redis:  client,
 		Bot:    bot2,
 	}, nil
 }

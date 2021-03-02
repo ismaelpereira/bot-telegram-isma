@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-redis/redis/v7"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/ismaelpereira/telegram-bot-isma/api/clients"
 	"github.com/ismaelpereira/telegram-bot-isma/bot/msgs"
@@ -26,7 +27,12 @@ func init() {
 }
 
 //MoneyHandleUpdate send the money message
-func MoneyHandleUpdate(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func MoneyHandleUpdate(
+	cfg *config.Config,
+	redis *redis.Client,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+) error {
 	command := strings.ToUpper(update.Message.CommandArguments())
 	commandSplit := strings.Fields(command)
 	if command == "" {

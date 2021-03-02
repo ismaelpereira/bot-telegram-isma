@@ -4,15 +4,21 @@ import (
 	"log"
 	"strings"
 
+	"github.com/go-redis/redis/v7"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-
 	"github.com/ismaelpereira/telegram-bot-isma/bot/controllers"
 	"github.com/ismaelpereira/telegram-bot-isma/config"
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
 //VerifyAndExecuteCommand is a function to pick the right command and execute the respective function
-func VerifyAndExecuteCommand(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update, cmd string) error {
+func VerifyAndExecuteCommand(
+	cfg *config.Config,
+	redis *redis.Client,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+	cmd string,
+) error {
 	log.Printf("got cmd %q\n", cmd)
 	Commands := map[string]types.Handler{
 		"help":     controllers.HelpHandlerUpdate,
@@ -26,19 +32,24 @@ func VerifyAndExecuteCommand(cfg *config.Config, bot *tgbotapi.BotAPI, update *t
 		"now":      controllers.TimerHandleUpdate,
 	}
 	if f, ok := Commands[cmd]; ok {
-		return f(cfg, bot, update)
+		return f(cfg, redis, bot, update)
 	}
-	return controllers.NotFoundHandlerUpdate(bot, update)
+	return controllers.NotFoundHandlerUpdate(cfg, redis, bot, update)
 }
 
-func CallbackActions(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func CallbackActions(
+	cfg *config.Config,
+	redis *redis.Client,
+	bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+) error {
 	if strings.HasPrefix(update.CallbackQuery.Data, "tvshows:") {
 		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "tvshows:")
-		return controllers.SeriesHandleUpdate(cfg, bot, update)
+		return controllers.SeriesHandleUpdate(cfg, redis, bot, update)
 	}
 	if strings.HasPrefix(update.CallbackQuery.Data, "movies:") {
 		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "movies:")
-		return controllers.MoviesHandleUpdate(cfg, bot, update)
+		return controllers.MoviesHandleUpdate(cfg, redis, bot, update)
 	}
 	return nil
 }

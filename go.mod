@@ -3,7 +3,7 @@ module github.com/ismaelpereira/telegram-bot-isma
 go 1.15
 
 require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/davecgh/go-spew v1.1.1
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-redis/redis/v7 v7.4.0
 	github.com/go-telegram-bot-api/telegram-bot-api v1.0.1-0.20201020035208-b6df6c273aa8

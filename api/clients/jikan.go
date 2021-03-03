@@ -8,7 +8,11 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
+	"github.com/go-redis/redis/v7"
+	"github.com/ismaelpereira/telegram-bot-isma/config"
+	r "github.com/ismaelpereira/telegram-bot-isma/redis"
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
@@ -96,15 +100,52 @@ func (t *MangaAPI) GetMangaPageDetails(mangaID string) ([]byte, string, error) {
 type animeAPICached struct {
 	api   AnimeAPI
 	cache interface{}
+	redis *redis.Client
 }
 
 func (t *animeAPICached) SearchAnime(animeName string) (*types.AnimeResponse, error) {
 	log.Println("anime api cached")
+	cfg, err := config.Wire()
+	if err != nil {
+		return nil, err
+	}
+	t.redis, err = r.Wire(cfg)
+	if err != nil {
+		return nil, err
+	}
+	keys, err := t.redis.Keys("telegram:anime:*").Result()
+	if err != nil {
+		return nil, err
+	}
+	if len(keys) != 0 {
+		for _, key := range keys {
+			if strings.TrimPrefix(key, "telegram:anime:") == animeName {
+				var manga *types.AnimeResponse
+				data, err := t.redis.Get(key).Bytes()
+				if err != nil {
+					return nil, err
+				}
+				err = json.Unmarshal(data, &manga)
+				if err != nil {
+					return nil, err
+				}
+				t.cache = manga
+			}
+		}
+	}
 	if t.cache != nil {
 		return t.cache.(*types.AnimeResponse), nil
 	}
 	res, err := t.api.SearchAnime(animeName)
 	if err != nil {
+		return nil, err
+	}
+	resJSON, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	key := "telegram:anime:" + animeName
+	if err = t.redis.Set(key, string(resJSON), 30*time.Second).Err(); err != nil {
 		return nil, err
 	}
 	t.cache = res

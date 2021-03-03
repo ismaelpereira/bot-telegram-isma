@@ -56,21 +56,21 @@ func nowHandler(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Updat
 			if err != nil {
 				return err
 			}
-			hour = time.Now().Add(duration) //.Add(-time.Hour * 3)
+			hour = time.Now().Add(duration).Add(-time.Hour * 3)
 		}
 		if measureOfTime == "minutes" {
 			duration, err := time.ParseDuration(value + "m")
 			if err != nil {
 				return err
 			}
-			hour = time.Now().Add(duration) //.Add(-time.Hour * 3)
+			hour = time.Now().Add(duration).Add(-time.Hour * 3)
 		}
 		if measureOfTime == "hours" {
 			duration, err := time.ParseDuration(value + "h")
 			if err != nil {
 				return err
 			}
-			hour = time.Now().Add(duration) //.Add(-time.Hour * 3)
+			hour = time.Now().Add(duration).Add(-time.Hour * 3)
 		}
 	}
 	if operation == "minus" {
@@ -79,7 +79,7 @@ func nowHandler(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Updat
 			if err != nil {
 				return err
 			}
-			hour = time.Now().Add(-time.Second * duration) //.Add(-time.Hour * 3)
+			hour = time.Now().Add(-time.Second * duration).Add(-time.Hour * 3)
 		}
 		if measureOfTime == "minutes" {
 			duration, err := time.ParseDuration(value + "m")
@@ -93,7 +93,7 @@ func nowHandler(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Updat
 			if err != nil {
 				return err
 			}
-			hour = time.Now().Add(-time.Hour * duration) //.Add(-time.Hour * 3)
+			hour = time.Now().Add(-time.Hour * duration).Add(-time.Hour * 3)
 		}
 	}
 	if operation != "plus" && operation != "minus" {
@@ -140,21 +140,21 @@ func reminderHandler(
 		if err != nil {
 			return err
 		}
-		expireTime = time.Now().Add(duration) //.Add(-time.Second * 3)
+		expireTime = time.Now().Add(duration)
 	}
 	if measureOfTime == "minutes" {
 		duration, err := time.ParseDuration(value + "m")
 		if err != nil {
 			return err
 		}
-		expireTime = time.Now().Add(duration) //.Add(-time.Minute * 3)
+		expireTime = time.Now().Add(duration)
 	}
 	if measureOfTime == "hours" {
 		duration, err := time.ParseDuration(value + "h")
 		if err != nil {
 			return err
 		}
-		expireTime = time.Now().Add(duration) //.Add(-time.Hour * 3)
+		expireTime = time.Now().Add(duration)
 	}
 	if err := redis.HMSet("telegram:reminder:"+expireTime.Format("2006:01:02:15:04:05"), "chatID", update.Message.Chat.ID, "text", message).Err(); err != nil {
 		return err

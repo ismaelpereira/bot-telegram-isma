@@ -21,6 +21,7 @@ func AnimesHandleUpdate(
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 ) error {
+	var searchResults *types.AnimeResponse
 	animeName := strings.TrimSpace(update.Message.CommandArguments())
 	if animeName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAnimes)
@@ -31,7 +32,7 @@ func AnimesHandleUpdate(
 	if err != nil {
 		return err
 	}
-	searchResults, err := animeAPI.SearchAnime(animeName)
+	searchResults, err = animeAPI.SearchAnime(animeName)
 	if err != nil {
 		return err
 	}

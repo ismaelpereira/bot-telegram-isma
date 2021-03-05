@@ -27,7 +27,7 @@ func VerifyAndExecuteCommand(
 		"mangas":   controllers.MangasHandleUpdate,
 		"money":    controllers.MoneyHandleUpdate,
 		"movies":   controllers.MoviesHandleUpdate,
-		"tvshows":  controllers.SeriesHandleUpdate,
+		"tvshows":  controllers.TVShowHandleUpdate,
 		"reminder": controllers.TimerHandleUpdate,
 		"now":      controllers.TimerHandleUpdate,
 	}
@@ -45,7 +45,7 @@ func CallbackActions(
 ) error {
 	if strings.HasPrefix(update.CallbackQuery.Data, "tvshows:") {
 		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "tvshows:")
-		return controllers.SeriesHandleUpdate(cfg, redis, bot, update)
+		return controllers.TVShowHandleUpdate(cfg, redis, bot, update)
 	}
 	if strings.HasPrefix(update.CallbackQuery.Data, "movies:") {
 		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "movies:")

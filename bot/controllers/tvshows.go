@@ -20,7 +20,7 @@ import (
 
 var tvShows []types.TVShow
 
-func SeriesHandleUpdate(
+func TVShowHandleUpdate(
 	cfg *config.Config,
 	redis *redis.Client,
 	bot *tgbotapi.BotAPI,

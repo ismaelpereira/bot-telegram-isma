@@ -14,9 +14,9 @@ type EditMediaJSON struct {
 }
 
 type Media struct {
-	Type    string `json:"type"`
+	Type    string
 	URL     string `json:"media"`
-	Caption string `json:"caption"`
+	Caption string
 }
 
 type Admiral struct {
@@ -62,10 +62,10 @@ type Manga struct {
 }
 
 type MoneySearchResult struct {
-	Success   bool   `json:"sucess"`
-	Timestamp int64  `json:"timestamp"`
-	Base      string `json:"base"`
-	Date      string `json:"date"`
+	Success   bool
+	Timestamp int64
+	Base      string
+	Date      string
 	Rates     map[string]float64
 }
 

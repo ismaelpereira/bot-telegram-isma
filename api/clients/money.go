@@ -8,6 +8,9 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/go-redis/redis/v7"
+	"github.com/ismaelpereira/telegram-bot-isma/config"
+	r "github.com/ismaelpereira/telegram-bot-isma/redis"
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
@@ -46,16 +49,37 @@ func (t *moneyAPI) GetCurrencies() (*types.MoneySearchResult, error) {
 }
 
 type moneyAPICached struct {
-	api        MoneyAPI
-	cache      interface{}
-	expireTime time.Time
+	api   MoneyAPI
+	cache interface{}
+	redis *redis.Client
 }
 
 func (t *moneyAPICached) GetCurrencies() (*types.MoneySearchResult, error) {
-	if t.expireTime.Before(time.Now()) {
-		t.cache = nil
-	}
 	log.Println("money api cached")
+	cfg, err := config.Wire()
+	if err != nil {
+		return nil, err
+	}
+	t.redis, err = r.Wire(cfg)
+	if err != nil {
+		return nil, err
+	}
+	keys, err := t.redis.Keys("telegram:rates").Result()
+	if err != nil {
+		return nil, err
+	}
+	for _, key := range keys {
+		var rates *types.MoneySearchResult
+		data, err := t.redis.Get(key).Bytes()
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(data, &rates)
+		if err != nil {
+			return nil, err
+		}
+		t.cache = rates
+	}
 	if t.cache != nil {
 		return t.cache.(*types.MoneySearchResult), nil
 	}
@@ -64,6 +88,13 @@ func (t *moneyAPICached) GetCurrencies() (*types.MoneySearchResult, error) {
 		return nil, err
 	}
 	t.cache = res
-	t.expireTime = time.Now().Add(1 * time.Hour)
+	key := "telegram:rates"
+	resJSON, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	if err = t.redis.Set(key, resJSON, 1*time.Minute).Err(); err != nil {
+		return nil, err
+	}
 	return res, nil
 }

@@ -35,11 +35,11 @@ func SeriesHandleUpdate(
 			return err
 		}
 		apiKey := cfg.MovieAcessKey.Key
-		searchClient, err := clients.NewSearchMedia(tvShowName, mediaType, apiKey)
+		searchClient, err := clients.NewSearchMedia(mediaType, tvShowName, apiKey)
 		if err != nil {
 			return err
 		}
-		_, tvShows, err = searchClient.SearchMedia(tvShowName, mediaType)
+		_, tvShows, err = searchClient.SearchMedia(mediaType, tvShowName)
 		if err != nil {
 			return err
 		}

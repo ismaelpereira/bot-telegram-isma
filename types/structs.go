@@ -1,6 +1,8 @@
 package types
 
 import (
+	"encoding/json"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
@@ -31,12 +33,12 @@ type Admiral struct {
 	ProfilePicture  string
 }
 
-type AnimeResponse struct {
-	LastPage           int
-	RequestCacheExpiry int
-	RequestCached      bool
-	RequestHash        string
-	Results            []Anime
+type JikanResponse struct {
+	LastPage           int             `json:"last_page"`
+	RequestCacheExpiry int             `json:"request_cache_expiry"`
+	RequestCached      bool            `json:"request_cached"`
+	RequestHash        string          `json:"request_hash"`
+	Data               json.RawMessage `json:"results"`
 }
 type Anime struct {
 	ID           int `json:"mal_id"`
@@ -45,13 +47,6 @@ type Anime struct {
 	Episodes     int
 	CoverPicture string `json:"image_url"`
 	Score        float64
-}
-type MangaResponse struct {
-	LastPage           int
-	RequestCacheExpiry int
-	RequestCached      bool
-	RequestHash        string
-	Results            []Manga
 }
 
 type Manga struct {
@@ -74,9 +69,9 @@ type MoneySearchResult struct {
 	Rates     map[string]float64
 }
 
-type MovieResponse struct {
-	Page    int
-	Results []Movie
+type MovieDBResponse struct {
+	Page int
+	Data json.RawMessage `json:"results"`
 }
 
 type Movie struct {
@@ -86,7 +81,7 @@ type Movie struct {
 	ReleaseDate   string  `json:"release_date"`
 	PosterPath    string  `json:"poster_path"`
 	Popularity    float64 `json:"popularity"`
-	Providers     WatchProvidersResponse
+	Providers     WatchProviders
 	Details       MovieDetails
 	Credits       MovieCredits
 }
@@ -101,13 +96,7 @@ type MovieCredits struct {
 	Crew []Crew
 }
 
-type Crew struct {
-	Name       string
-	Department string
-	Job        string
-}
-
-type WatchProvidersResponse struct {
+type WatchProviders struct {
 	ID      int
 	Results map[string]*CountryOptions
 }
@@ -125,11 +114,6 @@ type Provider struct {
 	ProviderName    string `json:"provider_name"`
 }
 
-type TVShowResponse struct {
-	Page    int
-	Results []TVShow
-}
-
 type TVShow struct {
 	ID            int
 	Title         string `json:"name"`
@@ -138,7 +122,7 @@ type TVShow struct {
 	PosterPath    string `json:"poster_path"`
 	ReleaseDate   string `json:"first_air_date"`
 	TVShowDetails TVShowDetails
-	Providers     WatchProvidersResponse
+	Providers     WatchProviders
 }
 
 type TVShowDetails struct {
@@ -147,6 +131,12 @@ type TVShowDetails struct {
 	Seasons      []TVShowSeasonDetails
 	Rating       float64 `json:"vote_average"`
 	CreatedBy    []Crew  `json:"created_by"`
+}
+
+type Crew struct {
+	Name       string
+	Department string
+	Job        string
 }
 
 type TVShowSeasonDetails struct {

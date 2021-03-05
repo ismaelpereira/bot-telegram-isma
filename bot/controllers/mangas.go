@@ -19,18 +19,22 @@ func MangasHandleUpdate(
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 ) error {
+	command := update.Message.Command()
 	mangaName := strings.TrimSpace(update.Message.CommandArguments())
 	if mangaName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgMangas)
 		_, err := bot.Send(msg)
 		return err
 	}
-	var mangaSearch *clients.MangaAPI
-	searchResults, err := mangaSearch.SearchManga(mangaName)
+	jikanAPI, err := clients.NewJikanAPI(mangaName, command)
 	if err != nil {
 		return err
 	}
-	for _, manga := range searchResults.Results {
+	searchResults, _, err := jikanAPI.SearchAnimeOrManga(mangaName, command)
+	if err != nil {
+		return err
+	}
+	for _, manga := range searchResults {
 		getMangasPictureAndSendMessage(bot, update, &manga)
 	}
 	return nil
@@ -41,6 +45,8 @@ func getMangasPictureAndSendMessage(
 	update *tgbotapi.Update,
 	m *types.Manga,
 ) error {
+	var err error
+	mangaName := strings.TrimSpace(update.Message.CommandArguments())
 	mMessage := tgbotapi.NewPhotoShare(update.Message.Chat.ID, m.CoverPicture)
 	volumesNumber := strconv.Itoa(m.Volumes)
 	chaptersNumber := strconv.Itoa(m.Chapters)
@@ -50,8 +56,12 @@ func getMangasPictureAndSendMessage(
 	if chaptersNumber == "0" {
 		chaptersNumber = "?"
 	}
-	var mangaSearch *clients.MangaAPI
-	japaneseName, status, err := mangaSearch.GetMangaPageDetails(strconv.Itoa(m.ID))
+	var mangaSearch clients.MangaDetails
+	mangaSearch, err = clients.NewMangaAPI(strconv.Itoa(m.ID), mangaName)
+	if err != nil {
+		return err
+	}
+	japaneseName, status, err := mangaSearch.GetMangaPageDetails(strconv.Itoa(m.ID), m.Title)
 	if err != nil {
 		return err
 	}
@@ -60,7 +70,7 @@ func getMangasPictureAndSendMessage(
 		"\nNota: " + strconv.FormatFloat(m.Score, 'f', 2, 64) +
 		"\nVolumes: " + volumesNumber +
 		"\nCapítulos: " + chaptersNumber +
-		"\nStatus: " + status
+		"\nStatus: " + string(status)
 	_, err = bot.Send(mMessage)
 	return err
 }

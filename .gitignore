@@ -301,3 +301,4 @@ local/
 telegram-bot-isma
 ./dist
 ./bin
+__debug_bin

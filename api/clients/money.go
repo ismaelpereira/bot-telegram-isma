@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
@@ -45,11 +46,15 @@ func (t *moneyAPI) GetCurrencies() (*types.MoneySearchResult, error) {
 }
 
 type moneyAPICached struct {
-	api   MoneyAPI
-	cache interface{}
+	api        MoneyAPI
+	cache      interface{}
+	expireTime time.Time
 }
 
 func (t *moneyAPICached) GetCurrencies() (*types.MoneySearchResult, error) {
+	if t.expireTime.Before(time.Now()) {
+		t.cache = nil
+	}
 	log.Println("money api cached")
 	if t.cache != nil {
 		return t.cache.(*types.MoneySearchResult), nil
@@ -59,5 +64,6 @@ func (t *moneyAPICached) GetCurrencies() (*types.MoneySearchResult, error) {
 		return nil, err
 	}
 	t.cache = res
+	t.expireTime = time.Now().Add(1 * time.Hour)
 	return res, nil
 }

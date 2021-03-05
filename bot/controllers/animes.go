@@ -12,8 +12,6 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
-var animesSearch clients.AnimeAPI
-
 //AnimeHandleUpdate is a function for anime work
 func AnimesHandleUpdate(
 	cfg *config.Config,
@@ -21,22 +19,22 @@ func AnimesHandleUpdate(
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 ) error {
-	var searchResults *types.AnimeResponse
+	command := update.Message.Command()
 	animeName := strings.TrimSpace(update.Message.CommandArguments())
 	if animeName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAnimes)
 		_, err := bot.Send(msg)
 		return err
 	}
-	animeAPI, err := clients.NewAnimeAPI(animeName)
+	jikanAPI, err := clients.NewJikanAPI(animeName, command)
 	if err != nil {
 		return err
 	}
-	searchResults, err = animeAPI.SearchAnime(animeName)
+	_, searchResults, err := jikanAPI.SearchAnimeOrManga(animeName, command)
 	if err != nil {
 		return err
 	}
-	for _, anime := range searchResults.Results {
+	for _, anime := range searchResults {
 		getAnimesPictureAndSendMessage(anime, update, bot)
 	}
 	return nil

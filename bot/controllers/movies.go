@@ -18,11 +18,9 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
-//MovieMenu is a map for mantain the results to make the button
-var MoviesMenu = make(map[int64][]types.Movie)
-var MoviesSearch clients.MovieDB
+var movies []types.Movie
 
-//MovieHandleUpdate send the movie message
+//MoviesHandleUpdate send the movie message
 func MoviesHandleUpdate(
 	cfg *config.Config,
 	redis *redis.Client,
@@ -30,119 +28,149 @@ func MoviesHandleUpdate(
 	update *tgbotapi.Update,
 ) error {
 	if update.CallbackQuery == nil {
+		mediaType := update.Message.Command()
 		movieName := strings.TrimSpace(update.Message.CommandArguments())
 		if movieName == "" {
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgMovies)
 			_, err := bot.Send(msg)
 			return err
 		}
-		MoviesSearch.ApiKey = cfg.MovieAcessKey.Key
-		moviesResults, err := MoviesSearch.SearchMovie(movieName)
+		apiKey := cfg.MovieAcessKey.Key
+		searchClient, err := clients.NewSearchMedia(movieName, mediaType, apiKey)
 		if err != nil {
 			return err
 		}
-		MoviesMenu[update.Message.Chat.ID] = moviesResults.Results
-		if v, ok := MoviesMenu[update.Message.Chat.ID]; ok && len(v) != 0 {
-			moviesProviders, err := MoviesSearch.GetMovieProviders(strconv.Itoa(v[0].ID))
-			if err != nil {
-				return err
-			}
-			moviesDetails, err := MoviesSearch.GetMovieDetails(strconv.Itoa(v[0].ID))
-			if err != nil {
-				return err
-			}
-			moviesCredits, err := MoviesSearch.GetMovieCredits(strconv.Itoa(v[0].ID))
-			if err != nil {
-				return err
-			}
-			v[0].Providers = *moviesProviders
-			v[0].Details = *moviesDetails
-			v[0].Credits = *moviesCredits
-			movieMessage, err := getMoviesPictureAndSendMessage(cfg, bot, update, v[0])
-			if err != nil {
-				return err
-			}
-			var kb []tgbotapi.InlineKeyboardMarkup
-			if len(v) > 1 {
-				kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
-					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movies:1"),
-					),
-				))
-			}
-			if len(moviesResults.Results) > 1 {
-				movieMessage.ReplyMarkup = kb[0]
-			}
-			_, err = bot.Send(movieMessage)
+		movies, _, err = searchClient.SearchMedia(movieName, mediaType)
+		if err != nil {
 			return err
 		}
+		detailsClient, err := clients.NewGetDetails(mediaType, strconv.Itoa(movies[0].ID), apiKey)
+		if err != nil {
+			return err
+		}
+		details, _, err := detailsClient.GetDetails(mediaType, strconv.Itoa(movies[0].ID))
+		if err != nil {
+			return err
+		}
+		providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(movies[0].ID), apiKey)
+		if err != nil {
+			return err
+		}
+		providers, err := providersClient.SearchProviders(mediaType, strconv.Itoa(movies[0].ID))
+		if err != nil {
+			return err
+		}
+		directorsClient, err := clients.NewGetMovieCredits(strconv.Itoa(movies[0].ID), apiKey)
+		if err != nil {
+			return err
+		}
+		credits, err := directorsClient.GetMovieCredits(strconv.Itoa(movies[0].ID))
+		if err != nil {
+			return err
+		}
+		movies[0].Details = *details
+		movies[0].Providers = *providers
+		movies[0].Credits = *credits
+		movieMessage, err := getMoviesPictureAndSendMessage(cfg, bot, update, movies[0])
+		if err != nil {
+			return err
+		}
+		var kb []tgbotapi.InlineKeyboardMarkup
+		if len(movies) > 1 {
+			kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movies:1"),
+				),
+			))
+		}
+		if len(movies) > 1 {
+			movieMessage.ReplyMarkup = kb[0]
+		}
+		_, err = bot.Send(movieMessage)
+		return err
 	}
-	return movieArrowButtonsAction(cfg, bot, update)
+	return movieArrowButtonsAction(cfg, bot, update, movies)
 }
 
 func movieArrowButtonsAction(
 	cfg *config.Config,
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
+	movies []types.Movie,
 ) error {
+	mediaType := "movies"
 	i, err := strconv.Atoi(update.CallbackQuery.Data)
 	if err != nil {
 		return err
 	}
-	if v, ok := MoviesMenu[update.CallbackQuery.Message.Chat.ID]; ok && len(v) != 0 {
-		moviesProviders, err := MoviesSearch.GetMovieProviders(strconv.Itoa(v[i].ID))
-		if err != nil {
-			return err
-		}
-		v[i].Providers = *moviesProviders
-		moviesDetails, err := MoviesSearch.GetMovieDetails(strconv.Itoa(v[i].ID))
-		if err != nil {
-			return err
-		}
-		v[i].Details = *moviesDetails
-		moviesCredits, err := MoviesSearch.GetMovieCredits(strconv.Itoa(v[i].ID))
-		v[i].Credits = *moviesCredits
-		movieMessage, err := getMoviesPictureAndSendMessage(cfg, bot, update, v[i])
-		if err != nil {
-			return err
-		}
-		var kb []tgbotapi.InlineKeyboardButton
-		if i != 0 {
-			kb = append(kb,
-				tgbotapi.NewInlineKeyboardButtonData(msgs.IconPrevious, "movies:"+strconv.Itoa(i-1)),
-			)
-		}
-		if i != (len(v) - 1) {
-			kb = append(kb,
-				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movies:"+strconv.Itoa(i+1)),
-			)
-		}
-		var msgEdit types.EditMediaJSON
-		msgEdit.ChatID = update.CallbackQuery.Message.Chat.ID
-		msgEdit.MessageID = update.CallbackQuery.Message.MessageID
-		msgEdit.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-			kb,
+	apiKey := cfg.MovieAcessKey.Key
+	detailsClient, err := clients.NewGetDetails(mediaType, strconv.Itoa(movies[i].ID), apiKey)
+	if err != nil {
+		return err
+	}
+	details, _, err := detailsClient.GetDetails(mediaType, strconv.Itoa(movies[i].ID))
+	if err != nil {
+		return err
+	}
+	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(movies[i].ID), apiKey)
+	if err != nil {
+		return err
+	}
+	providers, err := providersClient.SearchProviders(mediaType, strconv.Itoa(movies[i].ID))
+	if err != nil {
+		return err
+	}
+	directorsClient, err := clients.NewGetMovieCredits(strconv.Itoa(movies[i].ID), apiKey)
+	if err != nil {
+		return err
+	}
+	credits, err := directorsClient.GetMovieCredits(strconv.Itoa(movies[i].ID))
+	if err != nil {
+		return err
+	}
+	movies[i].Details = *details
+	movies[i].Providers = *providers
+	movies[i].Credits = *credits
+	movieMessage, err := getMoviesPictureAndSendMessage(cfg, bot, update, movies[i])
+	if err != nil {
+		return err
+	}
+	var kb []tgbotapi.InlineKeyboardButton
+	if i != 0 {
+		kb = append(kb,
+			tgbotapi.NewInlineKeyboardButtonData(msgs.IconPrevious, "movies:"+strconv.Itoa(i-1)),
 		)
-		msgEdit.Media.Caption = movieMessage.Caption
-		msgEdit.Media.Type = "photo"
-		if v[i].PosterPath == "" {
-			msgEdit.Media.URL = "https://badybassitt.sp.gov.br/lib/img/no-image.jpg"
-		} else {
-			msgEdit.Media.URL = "https://www.themoviedb.org/t/p/w300_and_h450_bestv2" + v[i].PosterPath
-		}
-		messageJSON, err := json.Marshal(msgEdit)
-		if err != nil {
-			return err
-		}
-		sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(cfg.Telegram.Key)+"/editMessageMedia",
-			"application/json", bytes.NewBuffer(messageJSON))
-		if err != nil {
-			return err
-		}
-		if sendMessage.StatusCode > 299 && sendMessage.StatusCode < 200 {
-			err = fmt.Errorf("Error in post method %w", err)
-			return err
-		}
+	}
+	if i != (len(movies) - 1) {
+		kb = append(kb,
+			tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movies:"+strconv.Itoa(i+1)),
+		)
+	}
+	var msgEdit types.EditMediaJSON
+	msgEdit.ChatID = update.CallbackQuery.Message.Chat.ID
+	msgEdit.MessageID = update.CallbackQuery.Message.MessageID
+	msgEdit.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		kb,
+	)
+	msgEdit.Media.Caption = movieMessage.Caption
+	msgEdit.Media.Type = "photo"
+	if movies[i].PosterPath == "" {
+		msgEdit.Media.URL = "https://badybassitt.sp.gov.br/lib/img/no-image.jpg"
+	} else {
+		msgEdit.Media.URL = "https://www.themoviedb.org/t/p/w300_and_h450_bestv2" + movies[i].PosterPath
+	}
+	messageJSON, err := json.Marshal(msgEdit)
+	if err != nil {
+		return err
+	}
+	sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(cfg.Telegram.Key)+"/editMessageMedia",
+		"application/json", bytes.NewBuffer(messageJSON))
+	if err != nil {
+		return err
+	}
+	if sendMessage.StatusCode > 299 && sendMessage.StatusCode < 200 {
+		err = fmt.Errorf("Error in post method %w", err)
+		return err
 	}
 	return nil
 }

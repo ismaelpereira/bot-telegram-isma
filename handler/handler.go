@@ -27,7 +27,7 @@ func VerifyAndExecuteCommand(
 		"mangas":   controllers.MangasHandleUpdate,
 		"money":    controllers.MoneyHandleUpdate,
 		"movies":   controllers.MoviesHandleUpdate,
-		"series":   controllers.SeriesHandleUpdate,
+		"tvshows":  controllers.SeriesHandleUpdate,
 		"reminder": controllers.TimerHandleUpdate,
 		"now":      controllers.TimerHandleUpdate,
 	}

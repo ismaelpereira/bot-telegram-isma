@@ -26,6 +26,9 @@ func (t *Bot) Start() {
 		panic(err)
 	}
 	cfg, err := config.Wire()
+	if err != nil {
+		panic(err)
+	}
 	conn, err := r.Wire(cfg)
 	if err != nil {
 		panic(err)

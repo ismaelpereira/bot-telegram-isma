@@ -3,6 +3,7 @@ package msgs
 const (
 	IconThumbsUp      = "👍"
 	IconX             = "❌"
+	IconOk            = "✅"
 	IconDevil         = "😈"
 	IconPointingRight = "👉"
 	IconPointingDown  = "👇"

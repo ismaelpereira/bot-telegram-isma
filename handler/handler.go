@@ -21,15 +21,16 @@ func VerifyAndExecuteCommand(
 ) error {
 	log.Printf("got cmd %q\n", cmd)
 	Commands := map[string]types.Handler{
-		"help":     controllers.HelpHandlerUpdate,
-		"admirals": controllers.AdmiralsHandleUpdate,
-		"animes":   controllers.AnimesHandleUpdate,
-		"mangas":   controllers.MangasHandleUpdate,
-		"money":    controllers.MoneyHandleUpdate,
-		"movies":   controllers.MoviesHandleUpdate,
-		"tvshows":  controllers.TVShowHandleUpdate,
-		"reminder": controllers.TimerHandleUpdate,
-		"now":      controllers.TimerHandleUpdate,
+		"help":      controllers.HelpHandlerUpdate,
+		"admirals":  controllers.AdmiralsHandleUpdate,
+		"animes":    controllers.AnimesHandleUpdate,
+		"mangas":    controllers.MangasHandleUpdate,
+		"money":     controllers.MoneyHandleUpdate,
+		"movies":    controllers.MoviesHandleUpdate,
+		"tvshows":   controllers.TVShowHandleUpdate,
+		"reminder":  controllers.TimerHandleUpdate,
+		"now":       controllers.TimerHandleUpdate,
+		"checklist": controllers.ChecklistHandleUpdate,
 	}
 	if f, ok := Commands[cmd]; ok {
 		return f(cfg, redis, bot, update)
@@ -50,6 +51,10 @@ func CallbackActions(
 	if strings.HasPrefix(update.CallbackQuery.Data, "movies:") {
 		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "movies:")
 		return controllers.MoviesHandleUpdate(cfg, redis, bot, update)
+	}
+	if strings.HasPrefix(update.CallbackQuery.Data, "checklist:") {
+		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "checklist:")
+		return controllers.ChecklistHandleUpdate(cfg, redis, bot, update)
 	}
 	return nil
 }

@@ -18,5 +18,8 @@ func Wire() (*Config, error) {
 	}
 	var configDecoded Config
 	err = json.Unmarshal(configEncoded, &configDecoded)
+	if err != nil {
+		return nil, err
+	}
 	return &configDecoded, nil
 }

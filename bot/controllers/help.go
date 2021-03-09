@@ -7,7 +7,7 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/config"
 )
 
-//HelpHandlerUpdate send the help message
+// HelpHandlerUpdate send the help message
 func HelpHandlerUpdate(
 	cfg *config.Config,
 	redis *redis.Client,

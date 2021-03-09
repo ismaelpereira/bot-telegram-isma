@@ -19,8 +19,7 @@ import (
 
 var animes []types.Anime
 
-//AnimeHandleUpdate is a function for anime work
-
+// AnimeHandleUpdate is a function for anime work
 func AnimesHandleUpdate(
 	cfg *config.Config,
 	redis *redis.Client,
@@ -43,10 +42,7 @@ func AnimesHandleUpdate(
 		if err != nil {
 			return err
 		}
-		animeMessage, err := getAnimesPictureAndSendMessage(bot, update, animes[0])
-		if err != nil {
-			return err
-		}
+		animeMessage := getAnimesPictureAndSendMessage(update, animes[0])
 		var kb []tgbotapi.InlineKeyboardMarkup
 		if len(animes) > 1 {
 			kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
@@ -61,14 +57,13 @@ func AnimesHandleUpdate(
 		_, err = bot.Send(animeMessage)
 		return err
 	}
-	return animesArrowButtonAction(cfg, redis, bot, update, animes)
+	return animesArrowButtonAction(cfg, update, animes)
 }
 
 func getAnimesPictureAndSendMessage(
-	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 	an types.Anime,
-) (*tgbotapi.PhotoConfig, error) {
+) *tgbotapi.PhotoConfig {
 	var anMessage tgbotapi.PhotoConfig
 	if update.CallbackQuery == nil {
 		anMessage = tgbotapi.NewPhotoShare(update.Message.Chat.ID, an.CoverPicture)
@@ -78,7 +73,7 @@ func getAnimesPictureAndSendMessage(
 
 	}
 	var airing string
-	if an.Airing == true {
+	if an.Airing {
 		airing = "Passando"
 	} else {
 		airing = "Finalizado"
@@ -91,13 +86,11 @@ func getAnimesPictureAndSendMessage(
 		"\nNota: " + strconv.FormatFloat(an.Score, 'f', 2, 64) +
 		"\nEpisódios: " + animeEpisodes +
 		"\nStatus: " + airing
-	return &anMessage, nil
+	return &anMessage
 }
 
 func animesArrowButtonAction(
 	cfg *config.Config,
-	redis *redis.Client,
-	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 	animes []types.Anime,
 ) error {
@@ -105,10 +98,7 @@ func animesArrowButtonAction(
 	if err != nil {
 		return err
 	}
-	animeMessage, err := getAnimesPictureAndSendMessage(bot, update, animes[i])
-	if err != nil {
-		return err
-	}
+	animeMessage := getAnimesPictureAndSendMessage(update, animes[i])
 	var kb []tgbotapi.InlineKeyboardButton
 	if i != 0 {
 		kb = append(kb,
@@ -142,8 +132,9 @@ func animesArrowButtonAction(
 	if err != nil {
 		return err
 	}
+	defer sendMessage.Body.Close()
 	if sendMessage.StatusCode > 299 || sendMessage.StatusCode < 200 {
-		err = fmt.Errorf("Error in post method %v", err)
+		err = fmt.Errorf("Error in post method %w", err)
 		log.Println(err)
 		return err
 	}

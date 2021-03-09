@@ -41,7 +41,8 @@ func (t *Bot) Start() {
 	for update := range updates {
 		if err := t.handle(cfg, conn, &update); err != nil {
 			if err != nil {
-				fmt.Errorf("%w", err)
+				err = fmt.Errorf("%w", err)
+				log.Println(err)
 			}
 		}
 	}

@@ -11,7 +11,7 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
-//VerifyAndExecuteCommand is a function to pick the right command and execute the respective function
+// VerifyAndExecuteCommand is a function to pick the right command and execute the respective function
 func VerifyAndExecuteCommand(
 	cfg *config.Config,
 	redis *redis.Client,

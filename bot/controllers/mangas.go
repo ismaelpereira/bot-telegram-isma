@@ -19,7 +19,7 @@ import (
 
 var mangas []types.Manga
 
-//MangaHandleUpdate is a function for manga work
+// MangaHandleUpdate is a function for manga work
 func MangasHandleUpdate(
 	cfg *config.Config,
 	redis *redis.Client,
@@ -42,7 +42,10 @@ func MangasHandleUpdate(
 		if err != nil {
 			return err
 		}
-		mangaMessage, err := getMangasPictureAndSendMessage(bot, update, mangas[0])
+		mangaMessage, err := getMangasPictureAndSendMessage(update, mangas[0])
+		if err != nil {
+			return err
+		}
 		var kb []tgbotapi.InlineKeyboardMarkup
 		if len(mangas) > 1 {
 			kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
@@ -57,11 +60,10 @@ func MangasHandleUpdate(
 		_, err = bot.Send(mangaMessage)
 		return err
 	}
-	return mangasArrowButtonAction(cfg, redis, bot, update, mangas)
+	return mangasArrowButtonAction(cfg, update, mangas)
 }
 
 func getMangasPictureAndSendMessage(
-	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 	m types.Manga,
 ) (*tgbotapi.PhotoConfig, error) {
@@ -103,8 +105,6 @@ func getMangasPictureAndSendMessage(
 
 func mangasArrowButtonAction(
 	cfg *config.Config,
-	redis *redis.Client,
-	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 	mangas []types.Manga,
 ) error {
@@ -112,7 +112,7 @@ func mangasArrowButtonAction(
 	if err != nil {
 		return err
 	}
-	mangaMessage, err := getMangasPictureAndSendMessage(bot, update, mangas[i])
+	mangaMessage, err := getMangasPictureAndSendMessage(update, mangas[i])
 	if err != nil {
 		return err
 	}
@@ -149,8 +149,9 @@ func mangasArrowButtonAction(
 	if err != nil {
 		return err
 	}
+	defer sendMessage.Body.Close()
 	if sendMessage.StatusCode > 299 || sendMessage.StatusCode < 200 {
-		err = fmt.Errorf("Error in post method %v", err)
+		err = fmt.Errorf("Error in post method %w", err)
 		log.Println(err)
 		return err
 	}

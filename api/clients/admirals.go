@@ -22,6 +22,7 @@ func NewAdmiral(path string) (AdmiralJSON, error) {
 		api: &admiralJSON{
 			path: path,
 		},
+		cache: path,
 	}, nil
 }
 

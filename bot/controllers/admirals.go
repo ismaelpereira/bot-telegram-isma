@@ -13,7 +13,6 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
-var admiralDecoded []types.Admiral
 var admiralAPI clients.AdmiralJSON
 
 func init() {
@@ -29,7 +28,7 @@ func init() {
 	}
 }
 
-//AdmiralHandleUpdate is a function for admiral work
+// AdmiralHandleUpdate is a function for admiral work
 func AdmiralsHandleUpdate(
 	cfg *config.Config,
 	redis *redis.Client,
@@ -48,7 +47,7 @@ func AdmiralsHandleUpdate(
 	}
 	for _, admiral := range admiralDecoded {
 		if strings.EqualFold(admiral.AdmiralName, admiralName) || strings.EqualFold(admiral.RealName, admiralName) {
-			getAdmiralPictureAndSendMessage(admiral, update, bot)
+			return getAdmiralPictureAndSendMessage(admiral, update, bot)
 		}
 	}
 	return nil

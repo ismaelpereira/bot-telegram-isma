@@ -20,7 +20,7 @@ import (
 
 var movies []types.Movie
 
-//MoviesHandleUpdate send the movie message
+// MoviesHandleUpdate send the movie message
 func MoviesHandleUpdate(
 	cfg *config.Config,
 	redis *redis.Client,
@@ -71,7 +71,7 @@ func MoviesHandleUpdate(
 		movies[0].Details = *details
 		movies[0].Providers = *providers
 		movies[0].Credits = *credits
-		movieMessage, err := getMoviesPictureAndSendMessage(cfg, bot, update, movies[0])
+		movieMessage, err := getMoviesPictureAndSendMessage(update, movies[0])
 		if err != nil {
 			return err
 		}
@@ -89,12 +89,11 @@ func MoviesHandleUpdate(
 		_, err = bot.Send(movieMessage)
 		return err
 	}
-	return movieArrowButtonsAction(cfg, bot, update, movies)
+	return movieArrowButtonsAction(cfg, update, movies)
 }
 
 func movieArrowButtonsAction(
 	cfg *config.Config,
-	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 	movies []types.Movie,
 ) error {
@@ -131,7 +130,7 @@ func movieArrowButtonsAction(
 	movies[i].Details = *details
 	movies[i].Providers = *providers
 	movies[i].Credits = *credits
-	movieMessage, err := getMoviesPictureAndSendMessage(cfg, bot, update, movies[i])
+	movieMessage, err := getMoviesPictureAndSendMessage(update, movies[i])
 	if err != nil {
 		return err
 	}
@@ -168,6 +167,7 @@ func movieArrowButtonsAction(
 	if err != nil {
 		return err
 	}
+	defer sendMessage.Body.Close()
 	if sendMessage.StatusCode > 299 || sendMessage.StatusCode < 200 {
 		err = fmt.Errorf("Error in post method %w", err)
 		return err
@@ -176,8 +176,6 @@ func movieArrowButtonsAction(
 }
 
 func getMoviesPictureAndSendMessage(
-	cfg *config.Config,
-	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 	mov types.Movie,
 ) (*tgbotapi.PhotoConfig, error) {

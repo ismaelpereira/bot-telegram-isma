@@ -61,7 +61,7 @@ func TVShowHandleUpdate(
 		}
 		tvShows[0].TVShowDetails = *details
 		tvShows[0].Providers = *providers
-		tvShowMessage, err := getTVShowPictureAndSendMessage(cfg, bot, update, tvShows[0])
+		tvShowMessage, err := getTVShowPictureAndSendMessage(update, tvShows[0])
 		if err != nil {
 			return err
 		}
@@ -92,7 +92,7 @@ func TVShowHandleUpdate(
 	if strings.HasPrefix(update.CallbackQuery.Data, "seasons:") {
 		return hasCallback(cfg, update, tvShows)
 	}
-	return tvShowArrowButtonsAction(cfg, bot, update, tvShows)
+	return tvShowArrowButtonsAction(cfg, update, tvShows)
 }
 
 func hasCallback(cfg *config.Config, update *tgbotapi.Update, tvShows []types.TVShow) error {
@@ -141,7 +141,7 @@ func hasCallback(cfg *config.Config, update *tgbotapi.Update, tvShows []types.TV
 			return err
 		}
 		defer sendMessage.Body.Close()
-		if sendMessage.StatusCode < 200 && sendMessage.StatusCode > 299 {
+		if sendMessage.StatusCode < 200 || sendMessage.StatusCode > 299 {
 			err = fmt.Errorf("Error in post method %w", err)
 			return err
 		}
@@ -160,7 +160,6 @@ func hasCallback(cfg *config.Config, update *tgbotapi.Update, tvShows []types.TV
 
 func tvShowArrowButtonsAction(
 	cfg *config.Config,
-	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 	tvShows []types.TVShow,
 ) error {
@@ -188,7 +187,7 @@ func tvShowArrowButtonsAction(
 	}
 	tvShows[i].TVShowDetails = *details
 	tvShows[i].Providers = *providers
-	tvShowMessage, err := getTVShowPictureAndSendMessage(cfg, bot, update, tvShows[i])
+	tvShowMessage, err := getTVShowPictureAndSendMessage(update, tvShows[i])
 	if err != nil {
 		return err
 	}
@@ -229,7 +228,7 @@ func tvShowArrowButtonsAction(
 		return err
 	}
 	defer sendMessage.Body.Close()
-	if sendMessage.StatusCode > 299 && sendMessage.StatusCode < 200 {
+	if sendMessage.StatusCode > 299 || sendMessage.StatusCode < 200 {
 		err = fmt.Errorf("Error in post method %w", err)
 		return err
 	}
@@ -275,7 +274,8 @@ func sendSeasonKeyboard(cfg *config.Config,
 	if err != nil {
 		return err
 	}
-	if sendMessage.StatusCode > 299 && sendMessage.StatusCode < 200 {
+	defer sendMessage.Body.Close()
+	if sendMessage.StatusCode > 299 || sendMessage.StatusCode < 200 {
 		err = fmt.Errorf("Error in post method %w", err)
 		return err
 	}
@@ -283,8 +283,6 @@ func sendSeasonKeyboard(cfg *config.Config,
 }
 
 func getTVShowPictureAndSendMessage(
-	cfg *config.Config,
-	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 	tvShow types.TVShow,
 ) (*tgbotapi.PhotoConfig, error) {

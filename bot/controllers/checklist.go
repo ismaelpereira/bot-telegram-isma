@@ -25,10 +25,10 @@ func ChecklistHandleUpdate(
 	if update.CallbackQuery != nil {
 		chatID := strconv.FormatInt(update.CallbackQuery.Message.Chat.ID, 10)
 		if strings.HasPrefix(update.CallbackQuery.Data, "checklist:"+chatID) {
-			return checklistCallback(cfg, redis, bot, update)
+			return checklistCallback(bot, update)
 		}
 		if strings.HasPrefix(update.CallbackQuery.Data, "checklist:") {
-			return checkItem(cfg, redis, bot, update)
+			return checkItem(bot, update)
 		}
 	}
 	query := update.Message.CommandArguments()
@@ -63,6 +63,12 @@ func ChecklistHandleUpdate(
 		chatID := strconv.FormatInt(update.Message.Chat.ID, 10)
 		keywords := strings.Join(args[1:], " ")
 		itens := strings.Fields(keywords)
+		if len(itens) < 2 {
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID,
+				"Você digitou o comando errado. Não foi possível completar a solicitação")
+			_, err := bot.Send(msg)
+			return err
+		}
 		checklistTitle := itens[0]
 		values := strings.Split(itens[1], ",")
 		var checklist types.Checklist
@@ -118,12 +124,9 @@ func ChecklistHandleUpdate(
 }
 
 func checklistCallback(
-	cfg *config.Config,
-	redis *redis.Client,
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update) error {
 	var message []string
-
 	values, err := clients.GetReminder(update.CallbackQuery.Data)
 	if err != nil {
 		return err
@@ -136,10 +139,10 @@ func checklistCallback(
 	var kb [][]tgbotapi.InlineKeyboardButton
 	for i, item := range data.Itens {
 		var symbol string
-		if item.IsChecked == false {
+		if !item.IsChecked {
 			symbol = msgs.IconX
 		}
-		if item.IsChecked == true {
+		if item.IsChecked {
 			symbol = msgs.IconOk
 		}
 		message = append(message, strconv.Itoa(i+1)+". "+item.Name+symbol+"\n")
@@ -151,12 +154,10 @@ func checklistCallback(
 	kbComplete.InlineKeyboard = kb
 	msg.ReplyMarkup = kbComplete
 	_, err = bot.Send(msg)
-	return nil
+	return err
 }
 
 func checkItem(
-	cfg *config.Config,
-	redis *redis.Client,
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update) error {
 	var message []string
@@ -179,19 +180,15 @@ func checkItem(
 	if err != nil {
 		return err
 	}
-	var kb [][]tgbotapi.InlineKeyboardButton
 	for i, item := range list.Itens {
 		var symbol string
-		if item.IsChecked == false {
+		if !item.IsChecked {
 			symbol = msgs.IconX
 		}
-		if item.IsChecked == true {
+		if item.IsChecked {
 			symbol = msgs.IconOk
 		}
 		message = append(message, strconv.Itoa(i+1)+". "+item.Name+symbol+"\n")
-		kb = append(kb, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i+1)+". "+item.Name, "checklist:"+list.Title+":"+strconv.Itoa(i)),
-		))
 	}
 	itemChecked := strings.Replace(message[pos], msgs.IconX, msgs.IconOk, 1)
 	message[pos] = strings.Replace(message[pos], message[pos], itemChecked, 1)

@@ -25,7 +25,7 @@ func TimerHandleUpdate(
 			_, err := bot.Send(msg)
 			return err
 		}
-		return reminderHandler(cfg, redis, bot, update)
+		return reminderHandler(redis, bot, update)
 	}
 	if update.Message.Command() == "now" {
 		if strings.ToLower(update.Message.CommandArguments()) == "" {
@@ -33,12 +33,12 @@ func TimerHandleUpdate(
 			_, err := bot.Send(msg)
 			return err
 		}
-		return nowHandler(cfg, bot, update)
+		return nowHandler(bot, update)
 	}
 	return nil
 }
 
-func nowHandler(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+func nowHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	commandSplited := strings.Fields(strings.ToLower(update.Message.CommandArguments()))
 	if len(commandSplited) != 3 {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
@@ -109,7 +109,6 @@ func nowHandler(cfg *config.Config, bot *tgbotapi.BotAPI, update *tgbotapi.Updat
 }
 
 func reminderHandler(
-	cfg *config.Config,
 	redis *redis.Client,
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
@@ -201,6 +200,9 @@ func reminderWorker(bot *tgbotapi.BotAPI, redis *redis.Client) error {
 
 func ReminderCheck(bot *tgbotapi.BotAPI, redis *redis.Client) {
 	for {
-		reminderWorker(bot, redis)
+		err := reminderWorker(bot, redis)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

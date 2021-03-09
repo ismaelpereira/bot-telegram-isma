@@ -26,7 +26,7 @@ func init() {
 	}
 }
 
-//MoneyHandleUpdate send the money message
+// MoneyHandleUpdate send the money message
 func MoneyHandleUpdate(
 	cfg *config.Config,
 	redis *redis.Client,

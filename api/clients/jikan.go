@@ -61,7 +61,7 @@ func (t *jikanAPI) SearchAnimeOrManga(mediaTitle string, mediaType string) ([]ty
 		if err != nil {
 			return nil, nil, err
 		}
-
+		defer apiResult.Body.Close()
 	}
 	if mediaType == "mangas" {
 		apiResult, err = http.Get("https://api.jikan.moe/v3/search/manga?q=" +
@@ -69,8 +69,8 @@ func (t *jikanAPI) SearchAnimeOrManga(mediaTitle string, mediaType string) ([]ty
 		if err != nil {
 			return nil, nil, err
 		}
+		defer apiResult.Body.Close()
 	}
-	defer apiResult.Body.Close()
 	searchResult, err := ioutil.ReadAll(apiResult.Body)
 	if err != nil {
 		return nil, nil, err
@@ -141,6 +141,9 @@ func (t *mangaAPICached) GetMangaPageDetails(mangaID string, mangaName string) (
 		return nil, nil, err
 	}
 	keys, err := t.redis.Keys("telegram:manga:details:*").Result()
+	if err != nil {
+		return nil, nil, err
+	}
 	for _, key := range keys {
 		details := strings.TrimPrefix(key, "telegram:manga:details:")
 		if strings.TrimPrefix(details, "japaneseName:") == mangaName {
@@ -166,7 +169,7 @@ func (t *mangaAPICached) GetMangaPageDetails(mangaID string, mangaName string) (
 		return nil, nil, err
 	}
 	t.jpCache = jpRes
-	t.statusCache = []byte(statusRes)
+	t.statusCache = statusRes
 	jpKey := "telegram:manga:details:japaneseName:" + mangaName
 	statusKey := "telegram:manga:details:status:" + mangaName
 	if err = t.redis.Set(jpKey, jpRes, 30*time.Second).Err(); err != nil {

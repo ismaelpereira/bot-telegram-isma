@@ -18,7 +18,7 @@ const (
 	MsgNotAuthorized  = IconDevil + " -- Desculpe, você não tem permissão para isso"
 	MsgServerError    = IconSkull + " -- Desculpe, tem algo de errado comigo..."
 	MsgNotFound       = IconWarning + " -- Desculpe, não consegui encontrar isso"
-	MsgHelp           = IconThumbsUp + " -- Os comandos são:\n/admirals\n/animes\n/mangas\n/money\n/movies\n/tvshows\n/now\n/reminder"
+	MsgHelp           = IconThumbsUp + " -- Os comandos são:\n/admirals\n/animes\n/mangas\n/money\n/movies\n/tvshows\n/now\n/reminder\n/checklist"
 	MsgAdmirals       = IconWarning + " -- The Admiral command is /admirals <admiral name> "
 	MsgAnimes         = IconWarning + " -- O comando é /animes <nome do anime>\nO resultado é baseado em uma pesquisa no MyanimeList"
 	MsgMangas         = IconWarning + " -- O comando é /mangas <nome do mangá>\nO resultado é baseado em uma pesquisa no MyanimeList"

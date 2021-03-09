@@ -7,7 +7,7 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/config"
 )
 
-//NotFoundHandlerUpdate send the message if is not a command
+// NotFoundHandlerUpdate send the message if is not a command
 func NotFoundHandlerUpdate(cfg *config.Config,
 	redis *redis.Client,
 	bot *tgbotapi.BotAPI,

@@ -15,10 +15,6 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
-type movieDetails struct {
-	ID string
-}
-
 type theMovieDBAPI struct {
 	apiKey string
 }
@@ -84,6 +80,7 @@ func (t *theMovieDBAPI) SearchMedia(
 		if err != nil {
 			return nil, nil, err
 		}
+		defer movieAPI.Body.Close()
 	}
 	if mediaType == "tvshows" {
 		movieAPI, err = http.Get("https://api.themoviedb.org/3/search/tv?api_key=" + url.QueryEscape(t.apiKey) +
@@ -91,8 +88,8 @@ func (t *theMovieDBAPI) SearchMedia(
 		if err != nil {
 			return nil, nil, err
 		}
+		defer movieAPI.Body.Close()
 	}
-	defer movieAPI.Body.Close()
 	searchResults, err := ioutil.ReadAll(movieAPI.Body)
 	if err != nil {
 		return nil, nil, err
@@ -135,6 +132,7 @@ func (t *theMovieDBAPI) SearchProviders(
 		if err != nil {
 			return nil, err
 		}
+		defer watchProviders.Body.Close()
 	}
 	if mediaType == "tvshows" {
 		watchProviders, err = http.Get("https://api.themoviedb.org/3/tv/" +
@@ -143,8 +141,8 @@ func (t *theMovieDBAPI) SearchProviders(
 		if err != nil {
 			return nil, err
 		}
+		defer watchProviders.Body.Close()
 	}
-	defer watchProviders.Body.Close()
 	providersValues, err := ioutil.ReadAll(watchProviders.Body)
 	if err != nil {
 		return nil, err
@@ -170,6 +168,7 @@ func (t *theMovieDBAPI) GetDetails(
 		if err != nil {
 			return nil, nil, err
 		}
+		defer resDetails.Body.Close()
 	}
 	if mediaType == "tvshows" {
 		resDetails, err = http.Get("https://api.themoviedb.org/3/tv/" + url.QueryEscape(mediaID) +
@@ -177,8 +176,8 @@ func (t *theMovieDBAPI) GetDetails(
 		if err != nil {
 			return nil, nil, err
 		}
+		defer resDetails.Body.Close()
 	}
-	defer resDetails.Body.Close()
 	details, err := ioutil.ReadAll(resDetails.Body)
 	if err != nil {
 		return nil, nil, err
@@ -213,6 +212,9 @@ func (t *theMovieDBAPI) GetMovieCredits(movieID string) (*types.MovieCredits, er
 	}
 	defer movieCredits.Body.Close()
 	movCredits, err := ioutil.ReadAll(movieCredits.Body)
+	if err != nil {
+		return nil, err
+	}
 	var credits types.MovieCredits
 	err = json.Unmarshal(movCredits, &credits)
 	if err != nil {

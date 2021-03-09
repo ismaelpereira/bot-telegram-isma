@@ -9,14 +9,14 @@ import (
 type EditMediaJSON struct {
 	ChatID      int64                         `json:"chat_id"`
 	MessageID   int                           `json:"message_id"`
-	Media       Media                         `json:"media"`
+	Media       InputMedia                    `json:"media"`
 	ReplyMarkup tgbotapi.InlineKeyboardMarkup `json:"reply_markup"`
 }
 
-type Media struct {
-	Type    string
+type InputMedia struct {
+	Type    string `json:"type"`
 	URL     string `json:"media"`
-	Caption string
+	Caption string `json:"caption"`
 }
 
 type Admiral struct {

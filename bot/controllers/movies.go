@@ -168,7 +168,7 @@ func movieArrowButtonsAction(
 	if err != nil {
 		return err
 	}
-	if sendMessage.StatusCode > 299 && sendMessage.StatusCode < 200 {
+	if sendMessage.StatusCode > 299 || sendMessage.StatusCode < 200 {
 		err = fmt.Errorf("Error in post method %w", err)
 		return err
 	}

@@ -32,6 +32,16 @@ func ChecklistHandleUpdate(
 		}
 	}
 	query := update.Message.CommandArguments()
+	if query == "" {
+		text := "Para usar o comando /checklist são necesários vários comandos: \n" +
+			"/checklist new <nome da checklist> -- cria uma nova checklist\n" +
+			"/checklist add <nome da checklist> <valor1,valor2,valorn...> -- adiciona itens a checklist\n" +
+			"/checklist list -- lista todas as checklists ja adicionadas com um menu de navegacao\n" +
+			"/checklist delete <nome da checklist> -- deleta a checklist desejada\n"
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+		_, err := bot.Send(msg)
+		return err
+	}
 	args, err := parseargs.Parse(query)
 	if err != nil {
 		return err
@@ -98,7 +108,7 @@ func ChecklistHandleUpdate(
 				tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i+1)+". "+strings.TrimPrefix(list, "checklist:"+chatID+":"), list),
 			))
 		}
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "CHECKLISTS\n")
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "**CHECKLISTS**\n")
 		kbComplete.InlineKeyboard = kb
 		msg.ReplyMarkup = kbComplete
 		_, err = bot.Send(msg)
@@ -137,7 +147,7 @@ func checklistCallback(
 			tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i+1)+". "+item.Name, "checklist:"+data.Title+":"+strconv.Itoa(i)),
 		))
 	}
-	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, data.Title+"\n"+strings.Join(message, ""))
+	msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "**"+data.Title+"**"+"\n"+strings.Join(message, ""))
 	kbComplete.InlineKeyboard = kb
 	msg.ReplyMarkup = kbComplete
 	_, err = bot.Send(msg)

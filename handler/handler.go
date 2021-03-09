@@ -56,5 +56,9 @@ func CallbackActions(
 		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "checklist:"+update.CallbackQuery.ID+":")
 		return controllers.ChecklistHandleUpdate(cfg, redis, bot, update)
 	}
+	if strings.HasPrefix(update.CallbackQuery.Data, "animes:") {
+		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "animes:")
+		return controllers.AnimesHandleUpdate(cfg, redis, bot, update)
+	}
 	return nil
 }

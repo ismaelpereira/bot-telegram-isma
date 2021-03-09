@@ -57,7 +57,7 @@ func (t *jikanAPI) SearchAnimeOrManga(mediaTitle string, mediaType string) ([]ty
 	var err error
 	if mediaType == "animes" {
 		apiResult, err = http.Get("https://api.jikan.moe/v3/search/anime?q=" +
-			url.QueryEscape(mediaTitle) + "&page=1&limit=3")
+			url.QueryEscape(mediaTitle) + "&page=1")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -65,7 +65,7 @@ func (t *jikanAPI) SearchAnimeOrManga(mediaTitle string, mediaType string) ([]ty
 	}
 	if mediaType == "mangas" {
 		apiResult, err = http.Get("https://api.jikan.moe/v3/search/manga?q=" +
-			url.QueryEscape(mediaTitle) + "&page=1&limit=3")
+			url.QueryEscape(mediaTitle) + "&page=1")
 		if err != nil {
 			return nil, nil, err
 		}

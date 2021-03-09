@@ -6,13 +6,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
-type EditMessageText struct {
-	ChatID      int64 `json:"chat_id"`
-	MessageID   int   `json:"message_id"`
-	Text        string
-	ReplyMarkup tgbotapi.InlineKeyboardMarkup `json:"reply_markup"`
-}
-
 type EditMediaJSON struct {
 	ChatID      int64                         `json:"chat_id"`
 	MessageID   int                           `json:"message_id"`
@@ -151,4 +144,13 @@ type TVShowSeasonDetails struct {
 	Name          string
 	AirDate       string `json:"air_date"`
 	PosterPath    string `json:"poster_path"`
+}
+
+type Checklist struct {
+	Title string
+	Itens []ChecklistItem
+}
+type ChecklistItem struct {
+	Name      string
+	IsChecked bool
 }

@@ -16,6 +16,7 @@ require (
 	github.com/onsi/ginkgo v1.15.0 // indirect
 	github.com/onsi/gomega v1.10.5 // indirect
 	github.com/stretchr/testify v1.7.0
+	github.com/txgruppi/parseargs-go v0.0.0-20170124215356-4cb98496e521
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110 // indirect
 	golang.org/x/sys v0.0.0-20210301091718-77cc2087c03b // indirect
 	golang.org/x/text v0.3.5 // indirect

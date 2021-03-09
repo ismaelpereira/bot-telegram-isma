@@ -53,7 +53,7 @@ func CallbackActions(
 		return controllers.MoviesHandleUpdate(cfg, redis, bot, update)
 	}
 	if strings.HasPrefix(update.CallbackQuery.Data, "checklist:") {
-		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "checklist:")
+		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "checklist:"+update.CallbackQuery.ID+":")
 		return controllers.ChecklistHandleUpdate(cfg, redis, bot, update)
 	}
 	return nil

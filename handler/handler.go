@@ -60,5 +60,9 @@ func CallbackActions(
 		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "animes:")
 		return controllers.AnimesHandleUpdate(cfg, redis, bot, update)
 	}
+	if strings.HasPrefix(update.CallbackQuery.Data, "mangas:") {
+		update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "mangas:")
+		return controllers.MangasHandleUpdate(cfg, redis, bot, update)
+	}
 	return nil
 }

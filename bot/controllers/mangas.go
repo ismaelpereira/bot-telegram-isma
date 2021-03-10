@@ -26,41 +26,44 @@ func MangasHandleUpdate(
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 ) error {
-	if update.CallbackQuery == nil {
-		command := update.Message.Command()
-		mangaName := strings.TrimSpace(update.Message.CommandArguments())
-		if mangaName == "" {
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgMangas)
-			_, err := bot.Send(msg)
-			return err
-		}
-		jikanAPI, err := clients.NewJikanAPI(mangaName, command)
-		if err != nil {
-			return err
-		}
-		mangas, _, err = jikanAPI.SearchAnimeOrManga(mangaName, command)
-		if err != nil {
-			return err
-		}
-		mangaMessage, err := getMangasPictureAndSendMessage(update, mangas[0])
-		if err != nil {
-			return err
-		}
-		var kb []tgbotapi.InlineKeyboardMarkup
-		if len(mangas) > 1 {
-			kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "mangas:1"),
-				),
-			))
-		}
-		if len(mangas) > 1 {
-			mangaMessage.ReplyMarkup = kb[0]
-		}
-		_, err = bot.Send(mangaMessage)
+	if update.CallbackQuery != nil {
+		return mangasArrowButtonAction(cfg, update, mangas)
+	}
+	command := update.Message.Command()
+	mangaName := strings.TrimSpace(update.Message.CommandArguments())
+	if mangaName == "" {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgMangas)
+		_, err := bot.Send(msg)
 		return err
 	}
-	return mangasArrowButtonAction(cfg, update, mangas)
+	jikanAPI, err := clients.NewJikanAPI(mangaName, command)
+	if err != nil {
+		return err
+	}
+	mangas, _, err = jikanAPI.SearchAnimeOrManga(mangaName, command)
+	if err != nil {
+		return err
+	}
+	if len(mangas) == 0 {
+		return nil
+	}
+	mangaMessage, err := getMangasPictureAndSendMessage(update, mangas[0])
+	if err != nil {
+		return err
+	}
+	var kb []tgbotapi.InlineKeyboardMarkup
+	if len(mangas) > 1 {
+		kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "mangas:1"),
+			),
+		))
+	}
+	if len(mangas) > 1 {
+		mangaMessage.ReplyMarkup = kb[0]
+	}
+	_, err = bot.Send(mangaMessage)
+	return err
 }
 
 func getMangasPictureAndSendMessage(
@@ -75,7 +78,6 @@ func getMangasPictureAndSendMessage(
 	}
 	if update.CallbackQuery != nil {
 		mMessage = tgbotapi.NewPhotoShare(update.CallbackQuery.Message.Chat.ID, m.CoverPicture)
-
 	}
 	volumesNumber := strconv.Itoa(m.Volumes)
 	chaptersNumber := strconv.Itoa(m.Chapters)

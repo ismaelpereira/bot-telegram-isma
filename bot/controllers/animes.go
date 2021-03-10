@@ -26,38 +26,41 @@ func AnimesHandleUpdate(
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 ) error {
-	if update.CallbackQuery == nil {
-		command := update.Message.Command()
-		animeName := strings.TrimSpace(update.Message.CommandArguments())
-		if animeName == "" {
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAnimes)
-			_, err := bot.Send(msg)
-			return err
-		}
-		jikanAPI, err := clients.NewJikanAPI(animeName, command)
-		if err != nil {
-			return err
-		}
-		_, animes, err = jikanAPI.SearchAnimeOrManga(animeName, command)
-		if err != nil {
-			return err
-		}
-		animeMessage := getAnimesPictureAndSendMessage(update, animes[0])
-		var kb []tgbotapi.InlineKeyboardMarkup
-		if len(animes) > 1 {
-			kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "animes:1"),
-				),
-			))
-		}
-		if len(animes) > 1 {
-			animeMessage.ReplyMarkup = kb[0]
-		}
-		_, err = bot.Send(animeMessage)
+	if update.CallbackQuery != nil {
+		return animesArrowButtonAction(cfg, update, animes)
+	}
+	command := update.Message.Command()
+	animeName := strings.TrimSpace(update.Message.CommandArguments())
+	if animeName == "" {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAnimes)
+		_, err := bot.Send(msg)
 		return err
 	}
-	return animesArrowButtonAction(cfg, update, animes)
+	jikanAPI, err := clients.NewJikanAPI(animeName, command)
+	if err != nil {
+		return err
+	}
+	_, animes, err = jikanAPI.SearchAnimeOrManga(animeName, command)
+	if err != nil {
+		return err
+	}
+	if len(animes) == 0 {
+		return nil
+	}
+	animeMessage := getAnimesPictureAndSendMessage(update, animes[0])
+	var kb []tgbotapi.InlineKeyboardMarkup
+	if len(animes) > 1 {
+		kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "animes:1"),
+			),
+		))
+	}
+	if len(animes) > 1 {
+		animeMessage.ReplyMarkup = kb[0]
+	}
+	_, err = bot.Send(animeMessage)
+	return err
 }
 
 func getAnimesPictureAndSendMessage(
@@ -70,7 +73,6 @@ func getAnimesPictureAndSendMessage(
 	}
 	if update.CallbackQuery != nil {
 		anMessage = tgbotapi.NewPhotoShare(update.CallbackQuery.Message.Chat.ID, an.CoverPicture)
-
 	}
 	var airing string
 	if an.Airing {

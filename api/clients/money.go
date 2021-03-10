@@ -58,29 +58,9 @@ type moneyAPICached struct {
 
 func (t *moneyAPICached) GetCurrencies() (*types.MoneySearchResult, error) {
 	log.Println("money api cached")
-	cfg, err := config.Wire()
+	err := t.getMoneyKeys()
 	if err != nil {
 		return nil, err
-	}
-	t.redis, err = r.Wire(cfg)
-	if err != nil {
-		return nil, err
-	}
-	keys, err := t.redis.Keys("telegram:rates").Result()
-	if err != nil {
-		return nil, err
-	}
-	for _, key := range keys {
-		var rates *types.MoneySearchResult
-		data, err := t.redis.Get(key).Bytes()
-		if err != nil {
-			return nil, err
-		}
-		err = json.Unmarshal(data, &rates)
-		if err != nil {
-			return nil, err
-		}
-		t.cache = rates
 	}
 	if t.cache != nil {
 		return t.cache.(*types.MoneySearchResult), nil
@@ -99,4 +79,35 @@ func (t *moneyAPICached) GetCurrencies() (*types.MoneySearchResult, error) {
 		return nil, err
 	}
 	return res, nil
+}
+
+func (t *moneyAPICached) getMoneyKeys() error {
+	cfg, err := config.Wire()
+	if err != nil {
+		return err
+	}
+	t.redis, err = r.Wire(cfg)
+	if err != nil {
+		return err
+	}
+	keys, err := t.redis.Keys("telegram:rates").Result()
+	if err != nil {
+		return err
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	for _, key := range keys {
+		var rates *types.MoneySearchResult
+		data, err := t.redis.Get(key).Bytes()
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(data, &rates)
+		if err != nil {
+			return err
+		}
+		t.cache = rates
+	}
+	return err
 }

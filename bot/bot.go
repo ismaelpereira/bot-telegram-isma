@@ -60,5 +60,4 @@ func (t *Bot) handle(cfg *config.Config,
 		return nil
 	}
 	return handler.VerifyAndExecuteCommand(cfg, redis, t.API, update, strings.ToLower(update.Message.Command()))
-
 }

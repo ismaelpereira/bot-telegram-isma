@@ -137,34 +137,9 @@ type mangaAPICached struct {
 
 func (t *mangaAPICached) GetMangaPageDetails(mangaID string, mangaName string) ([]byte, []byte, error) {
 	log.Println("manga details cached")
-	cfg, err := config.Wire()
+	err := t.searchRedisDetailsKeys(mangaName)
 	if err != nil {
 		return nil, nil, err
-	}
-	t.redis, err = r.Wire(cfg)
-	if err != nil {
-		return nil, nil, err
-	}
-	keys, err := t.redis.Keys("telegram:manga:details:*").Result()
-	if err != nil {
-		return nil, nil, err
-	}
-	for _, key := range keys {
-		details := strings.TrimPrefix(key, "telegram:manga:details:")
-		if strings.TrimPrefix(details, "japaneseName:") == mangaName {
-			data, err := t.redis.Get(key).Bytes()
-			if err != nil {
-				return nil, nil, err
-			}
-			t.jpCache = data
-		}
-		if strings.TrimPrefix(details, "status:") == mangaName {
-			data, err := t.redis.Get(key).Bytes()
-			if err != nil {
-				return nil, nil, err
-			}
-			t.statusCache = data
-		}
 	}
 	if t.jpCache != nil && t.statusCache != nil {
 		return t.jpCache.([]byte), t.statusCache.([]byte), nil
@@ -183,8 +158,43 @@ func (t *mangaAPICached) GetMangaPageDetails(mangaID string, mangaName string) (
 	if err = t.redis.Set(statusKey, statusRes, 30*time.Second).Err(); err != nil {
 		return nil, nil, err
 	}
-
 	return jpRes, statusRes, nil
+}
+
+func (t *mangaAPICached) searchRedisDetailsKeys(mangaName string) error {
+	cfg, err := config.Wire()
+	if err != nil {
+		return err
+	}
+	t.redis, err = r.Wire(cfg)
+	if err != nil {
+		return err
+	}
+	keys, err := t.redis.Keys("telegram:manga:details:*").Result()
+	if err != nil {
+		return err
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	for _, key := range keys {
+		details := strings.TrimPrefix(key, "telegram:manga:details:")
+		if strings.TrimPrefix(details, "japaneseName:") == mangaName {
+			data, err := t.redis.Get(key).Bytes()
+			if err != nil {
+				return err
+			}
+			t.jpCache = data
+		}
+		if strings.TrimPrefix(details, "status:") == mangaName {
+			data, err := t.redis.Get(key).Bytes()
+			if err != nil {
+				return err
+			}
+			t.statusCache = data
+		}
+	}
+	return nil
 }
 
 type jikanAPICached struct {
@@ -203,36 +213,11 @@ func (t *jikanAPICached) SearchAnimeOrManga(mediaTitle string, mediaType string)
 	if err != nil {
 		return nil, nil, err
 	}
-	keys, err := t.redis.Keys("telegram:" + mediaType + ":*").Result()
+	cache, err := SearchItem(t.redis, mediaType, mediaTitle)
 	if err != nil {
 		return nil, nil, err
 	}
-	if len(keys) != 0 {
-		for _, key := range keys {
-			if strings.TrimPrefix(key, "telegram:"+mediaType+":") == mediaTitle {
-				var animeMedia []types.Anime
-				var mangaMedia []types.Manga
-				data, err := t.redis.Get(key).Bytes()
-				if err != nil {
-					return nil, nil, err
-				}
-				if mediaType == "animes" {
-					err = json.Unmarshal(data, &animeMedia)
-					if err != nil {
-						return nil, nil, err
-					}
-					t.cache = animeMedia
-				}
-				if mediaType == "mangas" {
-					err = json.Unmarshal(data, &mangaMedia)
-					if err != nil {
-						return nil, nil, err
-					}
-					t.cache = mangaMedia
-				}
-			}
-		}
-	}
+	t.cache = cache
 	var resJSON []byte
 	if mediaType == "animes" {
 		if t.cache != nil {
@@ -273,4 +258,63 @@ func (t *jikanAPICached) SearchAnimeOrManga(mediaTitle string, mediaType string)
 		return resManga, nil, nil
 	}
 	return nil, nil, nil
+}
+
+func SearchItem(redis *redis.Client, mediaType string, mediaTitle string) (interface{}, error) {
+	keys, err := redis.Keys("telegram:" + mediaType + ":*").Result()
+	if err != nil {
+		return nil, err
+	}
+	if len(keys) == 0 {
+		return nil, nil
+	}
+	var cache interface{}
+	for _, key := range keys {
+		if strings.TrimPrefix(key, "telegram:"+mediaType+":") != mediaTitle {
+			continue
+		}
+		var animeMedia []types.Anime
+		var mangaMedia []types.Manga
+		var movieMedia []types.Movie
+		var tvShowMedia []types.TVShow
+		data, err := redis.Get(key).Bytes()
+		if err != nil {
+			return nil, err
+		}
+		switch mediaType {
+		case "animes":
+			{
+				err = json.Unmarshal(data, &animeMedia)
+				if err != nil {
+					return nil, err
+				}
+				cache = animeMedia
+			}
+		case "mangas":
+			{
+				err = json.Unmarshal(data, &mangaMedia)
+				if err != nil {
+					return nil, err
+				}
+				cache = mangaMedia
+			}
+		case "movies":
+			{
+				err = json.Unmarshal(data, &movieMedia)
+				if err != nil {
+					return nil, err
+				}
+				cache = movieMedia
+			}
+		case "tvshows":
+			{
+				err = json.Unmarshal(data, &tvShowMedia)
+				if err != nil {
+					return nil, err
+				}
+				cache = tvShowMedia
+			}
+		}
+	}
+	return cache, nil
 }

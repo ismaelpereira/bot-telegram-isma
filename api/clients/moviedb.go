@@ -197,7 +197,6 @@ func (t *theMovieDBAPI) GetDetails(
 			return nil, nil, err
 		}
 		return &movDetails, nil, err
-
 	}
 	if mediaType == "tvshows" {
 		var tvShowDetails types.TVShowDetails
@@ -206,7 +205,6 @@ func (t *theMovieDBAPI) GetDetails(
 			return nil, nil, err
 		}
 		return nil, &tvShowDetails, err
-
 	}
 	return nil, nil, nil
 }
@@ -247,35 +245,13 @@ func (t *movieAPICached) SearchMedia(mediaType string, mediaTitle string) ([]typ
 	if err != nil {
 		return nil, nil, err
 	}
-	keys, err := t.redis.Keys("telegram:" + mediaType + ":*").Result()
+	cache, err := SearchItem(t.redis, mediaType, mediaTitle)
 	if err != nil {
 		return nil, nil, err
 	}
-	if len(keys) != 0 {
-		for _, key := range keys {
-			if strings.TrimPrefix(key, "telegram:"+mediaType+":") == mediaTitle {
-				var movieMedia []types.Movie
-				var tvShowMedia []types.TVShow
-				data, err := t.redis.Get(key).Bytes()
-				if err != nil {
-					return nil, nil, err
-				}
-				if mediaType == "movies" {
-					err = json.Unmarshal(data, &movieMedia)
-					if err != nil {
-						return nil, nil, err
-					}
-					t.cache = movieMedia
-				}
-				if mediaType == "tvshows" {
-					err = json.Unmarshal(data, &tvShowMedia)
-					if err != nil {
-						return nil, nil, err
-					}
-					t.cache = tvShowMedia
-				}
-			}
-		}
+	t.cache = cache
+	if err != nil {
+		return nil, nil, err
 	}
 	var resJSON []byte
 	if mediaType == "movies" {
@@ -327,33 +303,9 @@ type providersCached struct {
 
 func (t *providersCached) SearchProviders(mediaType string, mediaID string) (*types.WatchProviders, error) {
 	log.Println("providers cached")
-	cfg, err := config.Wire()
+	err := t.searchRedisProvidersKeys(mediaType, mediaID)
 	if err != nil {
 		return nil, err
-	}
-	t.redis, err = r.Wire(cfg)
-	if err != nil {
-		return nil, err
-	}
-	keys, err := t.redis.Keys("telegram:" + mediaType + ":providers:*").Result()
-	if err != nil {
-		return nil, err
-	}
-	if len(keys) != 0 {
-		for _, key := range keys {
-			if strings.TrimPrefix(key, "telegram:"+mediaType+":providers:") == mediaID {
-				var providers *types.WatchProviders
-				data, err := t.redis.Get(key).Bytes()
-				if err != nil {
-					return nil, err
-				}
-				err = json.Unmarshal(data, &providers)
-				if err != nil {
-					return nil, err
-				}
-				t.cache = providers
-			}
-		}
 	}
 	if t.cache != nil {
 		return t.cache.(*types.WatchProviders), nil
@@ -375,51 +327,53 @@ func (t *providersCached) SearchProviders(mediaType string, mediaID string) (*ty
 	return res, nil
 }
 
+func (t *providersCached) searchRedisProvidersKeys(mediaType string, mediaID string) error {
+	cfg, err := config.Wire()
+	if err != nil {
+		return err
+	}
+	t.redis, err = r.Wire(cfg)
+	if err != nil {
+		return err
+	}
+	keys, err := t.redis.Keys("telegram:" + mediaType + ":providers:*").Result()
+	if err != nil {
+		return err
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	for _, key := range keys {
+		if strings.TrimPrefix(key, "telegram:"+mediaType+":providers:") == mediaID {
+			var providers *types.WatchProviders
+			data, err := t.redis.Get(key).Bytes()
+			if err != nil {
+				return err
+			}
+			err = json.Unmarshal(data, &providers)
+			if err != nil {
+				return err
+			}
+			t.cache = providers
+		}
+	}
+	return nil
+}
+
 type detailsCached struct {
 	api   GetDetails
 	cache interface{}
 	redis *redis.Client
 }
 
-func (t *detailsCached) GetDetails(mediaType string, mediaID string) (*types.MovieDetails, *types.TVShowDetails, error) {
+func (t *detailsCached) GetDetails(
+	mediaType string,
+	mediaID string,
+) (*types.MovieDetails, *types.TVShowDetails, error) {
 	log.Println("details cached")
-	cfg, err := config.Wire()
+	err := t.searchDetailsKeys(mediaType, mediaID)
 	if err != nil {
 		return nil, nil, err
-	}
-	t.redis, err = r.Wire(cfg)
-	if err != nil {
-		return nil, nil, err
-	}
-	keys, err := t.redis.Keys("telegram:" + mediaType + ":details:*").Result()
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(keys) != 0 {
-		for _, key := range keys {
-			if strings.TrimPrefix(key, "telegram:"+mediaType+":details:") == mediaID {
-				var movieDetails *types.MovieDetails
-				var tvShowDetails *types.TVShowDetails
-				data, err := t.redis.Get(key).Bytes()
-				if err != nil {
-					return nil, nil, err
-				}
-				if mediaType == "movies" {
-					err = json.Unmarshal(data, &movieDetails)
-					if err != nil {
-						return nil, nil, err
-					}
-					t.cache = movieDetails
-				}
-				if mediaType == "tvshows" {
-					err = json.Unmarshal(data, &tvShowDetails)
-					if err != nil {
-						return nil, nil, err
-					}
-					t.cache = tvShowDetails
-				}
-			}
-		}
 	}
 	var resJSON []byte
 	if mediaType == "movies" {
@@ -463,6 +417,51 @@ func (t *detailsCached) GetDetails(mediaType string, mediaID string) (*types.Mov
 	return nil, nil, nil
 }
 
+func (t *detailsCached) searchDetailsKeys(mediaType string, mediaID string) error {
+	cfg, err := config.Wire()
+	if err != nil {
+		return err
+	}
+	t.redis, err = r.Wire(cfg)
+	if err != nil {
+		return err
+	}
+	keys, err := t.redis.Keys("telegram:" + mediaType + ":details:*").Result()
+	if err != nil {
+		return err
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	for _, key := range keys {
+		if strings.TrimPrefix(key, "telegram:"+mediaType+":details:") != mediaID {
+			continue
+		}
+		var movieDetails *types.MovieDetails
+		var tvShowDetails *types.TVShowDetails
+		data, err := t.redis.Get(key).Bytes()
+		if err != nil {
+			return err
+		}
+		if mediaType == "movies" {
+			err = json.Unmarshal(data, &movieDetails)
+			if err != nil {
+				return err
+			}
+			t.cache = movieDetails
+		}
+		if mediaType == "tvshows" {
+			err = json.Unmarshal(data, &tvShowDetails)
+			if err != nil {
+				return err
+			}
+			t.cache = tvShowDetails
+		}
+	}
+
+	return nil
+}
+
 type moviesCreditCached struct {
 	api   GetMovieCredits
 	cache interface{}
@@ -471,33 +470,9 @@ type moviesCreditCached struct {
 
 func (t *moviesCreditCached) GetMovieCredits(movieID string) (*types.MovieCredits, error) {
 	log.Println("credits cached")
-	cfg, err := config.Wire()
+	err := t.getCreditKeys(movieID)
 	if err != nil {
 		return nil, err
-	}
-	t.redis, err = r.Wire(cfg)
-	if err != nil {
-		return nil, err
-	}
-	keys, err := t.redis.Keys("telegram:movies:credits:*").Result()
-	if err != nil {
-		return nil, err
-	}
-	if len(keys) != 0 {
-		for _, key := range keys {
-			if strings.TrimPrefix(key, "telegram:movies:credits:") == movieID {
-				var credits types.MovieCredits
-				data, err := t.redis.Get(key).Bytes()
-				if err != nil {
-					return nil, err
-				}
-				err = json.Unmarshal(data, &credits)
-				if err != nil {
-					return nil, err
-				}
-				t.cache = credits
-			}
-		}
 	}
 	if t.cache != nil {
 		return t.cache.(*types.MovieCredits), nil
@@ -512,9 +487,43 @@ func (t *moviesCreditCached) GetMovieCredits(movieID string) (*types.MovieCredit
 	if err != nil {
 		return nil, err
 	}
-	key := "telegram:movies:credits" + movieID
+	key := "telegram:movies:credits:" + movieID
 	if err = t.redis.Set(key, resJSON, 72*time.Hour).Err(); err != nil {
 		return nil, err
 	}
 	return res, nil
+}
+
+func (t *moviesCreditCached) getCreditKeys(movieID string) error {
+	cfg, err := config.Wire()
+	if err != nil {
+		return err
+	}
+	t.redis, err = r.Wire(cfg)
+	if err != nil {
+		return err
+	}
+	keys, err := t.redis.Keys("telegram:movies:credits:*").Result()
+	if err != nil {
+		return err
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	for _, key := range keys {
+		if strings.TrimPrefix(key, "telegram:movies:credits:") == movieID {
+			var credits *types.MovieCredits
+			data, err := t.redis.Get(key).Bytes()
+			if err != nil {
+				return err
+			}
+			err = json.Unmarshal(data, &credits)
+			if err != nil {
+				return err
+			}
+			t.cache = credits
+		}
+	}
+
+	return nil
 }

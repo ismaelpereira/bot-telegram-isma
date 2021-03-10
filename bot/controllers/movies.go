@@ -27,69 +27,72 @@ func MoviesHandleUpdate(
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 ) error {
-	if update.CallbackQuery == nil {
-		mediaType := update.Message.Command()
-		movieName := strings.TrimSpace(update.Message.CommandArguments())
-		if movieName == "" {
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgMovies)
-			_, err := bot.Send(msg)
-			return err
-		}
-		apiKey := cfg.MovieAcessKey.Key
-		searchClient, err := clients.NewSearchMedia(mediaType, movieName, apiKey)
-		if err != nil {
-			return err
-		}
-		movies, _, err = searchClient.SearchMedia(mediaType, movieName)
-		if err != nil {
-			return err
-		}
-		detailsClient, err := clients.NewGetDetails(mediaType, strconv.Itoa(movies[0].ID), apiKey)
-		if err != nil {
-			return err
-		}
-		details, _, err := detailsClient.GetDetails(mediaType, strconv.Itoa(movies[0].ID))
-		if err != nil {
-			return err
-		}
-		providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(movies[0].ID), apiKey)
-		if err != nil {
-			return err
-		}
-		providers, err := providersClient.SearchProviders(mediaType, strconv.Itoa(movies[0].ID))
-		if err != nil {
-			return err
-		}
-		directorsClient, err := clients.NewGetMovieCredits(strconv.Itoa(movies[0].ID), apiKey)
-		if err != nil {
-			return err
-		}
-		credits, err := directorsClient.GetMovieCredits(strconv.Itoa(movies[0].ID))
-		if err != nil {
-			return err
-		}
-		movies[0].Details = *details
-		movies[0].Providers = *providers
-		movies[0].Credits = *credits
-		movieMessage, err := getMoviesPictureAndSendMessage(update, movies[0])
-		if err != nil {
-			return err
-		}
-		var kb []tgbotapi.InlineKeyboardMarkup
-		if len(movies) > 1 {
-			kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movies:1"),
-				),
-			))
-		}
-		if len(movies) > 1 {
-			movieMessage.ReplyMarkup = kb[0]
-		}
-		_, err = bot.Send(movieMessage)
+	if update.CallbackQuery != nil {
+		return movieArrowButtonsAction(cfg, update, movies)
+	}
+	mediaType := update.Message.Command()
+	movieName := strings.TrimSpace(update.Message.CommandArguments())
+	if movieName == "" {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgMovies)
+		_, err := bot.Send(msg)
 		return err
 	}
-	return movieArrowButtonsAction(cfg, update, movies)
+	apiKey := cfg.MovieAcessKey.Key
+	searchClient, err := clients.NewSearchMedia(mediaType, movieName, apiKey)
+	if err != nil {
+		return err
+	}
+	movies, _, err = searchClient.SearchMedia(mediaType, movieName)
+	if err != nil {
+		return err
+	}
+	if len(movies) == 0 {
+		return nil
+	}
+	detailsClient, err := clients.NewGetDetails(mediaType, strconv.Itoa(movies[0].ID), apiKey)
+	if err != nil {
+		return err
+	}
+	details, _, err := detailsClient.GetDetails(mediaType, strconv.Itoa(movies[0].ID))
+	if err != nil {
+		return err
+	}
+	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(movies[0].ID), apiKey)
+	if err != nil {
+		return err
+	}
+	providers, err := providersClient.SearchProviders(mediaType, strconv.Itoa(movies[0].ID))
+	if err != nil {
+		return err
+	}
+	directorsClient, err := clients.NewGetMovieCredits(strconv.Itoa(movies[0].ID), apiKey)
+	if err != nil {
+		return err
+	}
+	credits, err := directorsClient.GetMovieCredits(strconv.Itoa(movies[0].ID))
+	if err != nil {
+		return err
+	}
+	movies[0].Details = *details
+	movies[0].Providers = *providers
+	movies[0].Credits = *credits
+	movieMessage, err := getMoviesPictureAndSendMessage(update, movies[0])
+	if err != nil {
+		return err
+	}
+	var kb []tgbotapi.InlineKeyboardMarkup
+	if len(movies) > 1 {
+		kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movies:1"),
+			),
+		))
+	}
+	if len(movies) > 1 {
+		movieMessage.ReplyMarkup = kb[0]
+	}
+	_, err = bot.Send(movieMessage)
+	return err
 }
 
 func movieArrowButtonsAction(
@@ -203,59 +206,57 @@ func getMoviesPictureAndSendMessage(
 	moviesCreditsMessage := getMovieDirector(mov)
 	var movMessage tgbotapi.PhotoConfig
 	if update.CallbackQuery == nil {
-		movMessage = tgbotapi.NewPhotoShare(update.Message.Chat.ID, "https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+mov.PosterPath)
+		movMessage = tgbotapi.NewPhotoShare(update.Message.Chat.ID,
+			"https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+mov.PosterPath)
 	}
 	if update.CallbackQuery != nil {
-		movMessage = tgbotapi.NewPhotoShare(update.CallbackQuery.Message.Chat.ID, "https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+mov.PosterPath)
+		movMessage = tgbotapi.NewPhotoShare(update.CallbackQuery.Message.Chat.ID,
+			"https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+mov.PosterPath)
 	}
-	movMessage.Caption = strings.Join(moviesDetailsMessage, "") + strings.Join(moviesProvidersMessage, "") + "\nDiretor: " + strings.Join(moviesCreditsMessage, ",")
+	movMessage.Caption = strings.Join(moviesDetailsMessage, "") +
+		strings.Join(moviesProvidersMessage, "") + "\nDiretor: " +
+		strings.Join(moviesCreditsMessage, ",")
 	return &movMessage, nil
 }
 
 func getMovieProviders(mov types.Movie) []string {
-	var movProvidersMessage []string
-	if country, ok := mov.Providers.Results["BR"]; ok && country != nil {
-		if country.Buy != nil {
-			movProvidersMessage = append(movProvidersMessage, "\nPara Comprar: ")
-			for i, providerBuy := range country.Buy {
-				movProvidersMessage = append(movProvidersMessage, providerBuy.ProviderName)
-				if i == len(country.Buy)-1 {
-					movProvidersMessage = append(movProvidersMessage, ".")
-				} else {
-					movProvidersMessage = append(movProvidersMessage, ", ")
-				}
-			}
+	country := mov.Providers.Results["BR"]
+	if country == nil {
+		return nil
+	}
+	movProvidersMessage := make([]string, 0, len(country.Buy)+len(country.Rent)+len(country.Flatrate))
+	movProvidersMessage = append(movProvidersMessage, "\nPara Comprar: ")
+	for i, providerBuy := range country.Buy {
+		movProvidersMessage = append(movProvidersMessage, providerBuy.ProviderName)
+		if i == len(country.Buy)-1 {
+			movProvidersMessage = append(movProvidersMessage, ".")
+		} else {
+			movProvidersMessage = append(movProvidersMessage, ", ")
 		}
-
-		if country.Rent != nil {
-			movProvidersMessage = append(movProvidersMessage, "\nPara Alugar: ")
-			for i, providerRent := range country.Rent {
-				movProvidersMessage = append(movProvidersMessage, providerRent.ProviderName)
-				if i == len(country.Rent)-1 {
-					movProvidersMessage = append(movProvidersMessage, ".")
-				} else {
-					movProvidersMessage = append(movProvidersMessage, ", ")
-				}
-			}
+	}
+	movProvidersMessage = append(movProvidersMessage, "\nPara Alugar: ")
+	for i, providerRent := range country.Rent {
+		movProvidersMessage = append(movProvidersMessage, providerRent.ProviderName)
+		if i == len(country.Rent)-1 {
+			movProvidersMessage = append(movProvidersMessage, ".")
+		} else {
+			movProvidersMessage = append(movProvidersMessage, ", ")
 		}
-
-		if country.Flatrate != nil {
-			movProvidersMessage = append(movProvidersMessage, "\nServicos de streaming: ")
-			for i, providerFlatrate := range country.Flatrate {
-				movProvidersMessage = append(movProvidersMessage, providerFlatrate.ProviderName)
-				if i == len(country.Flatrate)-1 {
-					movProvidersMessage = append(movProvidersMessage, ".")
-				} else {
-					movProvidersMessage = append(movProvidersMessage, ", ")
-				}
-			}
+	}
+	movProvidersMessage = append(movProvidersMessage, "\nServicos de streaming: ")
+	for i, providerFlatrate := range country.Flatrate {
+		movProvidersMessage = append(movProvidersMessage, providerFlatrate.ProviderName)
+		if i == len(country.Flatrate)-1 {
+			movProvidersMessage = append(movProvidersMessage, ".")
+		} else {
+			movProvidersMessage = append(movProvidersMessage, ", ")
 		}
 	}
 	return movProvidersMessage
 }
 
 func getMovieDirector(mov types.Movie) []string {
-	directors := make([]string, 0, 2)
+	directors := make([]string, 0, len(mov.Credits.Crew))
 	for _, crew := range mov.Credits.Crew {
 		if crew.Job == "Director" && crew.Department == "Directing" {
 			directors = append(directors, crew.Name)

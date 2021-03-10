@@ -50,58 +50,32 @@ func nowHandler(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
 	value := commandSplited[1]
 	measureOfTime := commandSplited[2]
 	var hour time.Time
-	if operation == "plus" {
-		if measureOfTime == "seconds" {
-			duration, err := time.ParseDuration(value + "s")
+	switch operation {
+	case "plus":
+		{
+			duration, err := time.ParseDuration(value + string(measureOfTime[0]))
 			if err != nil {
 				return err
 			}
 			hour = time.Now().Add(duration).Add(-time.Hour * 3)
 		}
-		if measureOfTime == "minutes" {
-			duration, err := time.ParseDuration(value + "m")
+	case "minus":
+		{
+			duration, err := time.ParseDuration(value + string(measureOfTime[0]))
 			if err != nil {
 				return err
 			}
-			hour = time.Now().Add(duration).Add(-time.Hour * 3)
+			hour = time.Now().Add(-duration).Add(-time.Hour * 3)
 		}
-		if measureOfTime == "hours" {
-			duration, err := time.ParseDuration(value + "h")
-			if err != nil {
-				return err
-			}
-			hour = time.Now().Add(duration).Add(-time.Hour * 3)
-		}
-	}
-	if operation == "minus" {
-		if measureOfTime == "seconds" {
-			duration, err := time.ParseDuration(value + "s")
-			if err != nil {
-				return err
-			}
-			hour = time.Now().Add(-time.Second * duration).Add(-time.Hour * 3)
-		}
-		if measureOfTime == "minutes" {
-			duration, err := time.ParseDuration(value + "m")
-			if err != nil {
-				return err
-			}
-			hour = time.Now().Add(-time.Minute * duration).Add(-time.Hour * 3)
-		}
-		if measureOfTime == "hours" {
-			duration, err := time.ParseDuration(value + "h")
-			if err != nil {
-				return err
-			}
-			hour = time.Now().Add(-time.Hour * duration).Add(-time.Hour * 3)
+	default:
+		{
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID,
+				"Você digitou o comando errado. Não foi possível completar a solicitação")
+			_, err := bot.Send(msg)
+			return err
 		}
 	}
-	if operation != "plus" && operation != "minus" {
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
-			"Você digitou o comando errado. Não foi possível completar a solicitação")
-		_, err := bot.Send(msg)
-		return err
-	}
+
 	time := hour.Format("Monday, 2 January, 2006 - 15:04:05")
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, time)
 	_, err := bot.Send(msg)
@@ -155,7 +129,9 @@ func reminderHandler(
 		}
 		expireTime = time.Now().Add(duration)
 	}
-	if err := redis.HMSet("telegram:reminder:"+expireTime.Format("2006:01:02:15:04:05"), "chatID", update.Message.Chat.ID, "text", message).Err(); err != nil {
+	if err := redis.HMSet("telegram:reminder:"+
+		expireTime.Format("2006:01:02:15:04:05"), "chatID", update.Message.Chat.ID,
+		"text", message).Err(); err != nil {
 		return err
 	}
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID,
@@ -172,26 +148,27 @@ func reminderWorker(bot *tgbotapi.BotAPI, redis *redis.Client) error {
 	sort.Strings(keys)
 	now := "telegram:reminder:" + time.Now().Format("2006:01:02:15:04:05")
 	for _, key := range keys {
-		if key <= now {
-			log.Printf("got reminder with key %q\n", key)
-			data, err := redis.HGetAll(key).Result()
+		if key > now {
+			continue
+		}
+		log.Printf("got reminder with key %q\n", key)
+		data, err := redis.HGetAll(key).Result()
+		if err != nil {
+			return err
+		}
+		if data != nil && data["chatID"] != "" && data["text"] != "" {
+			chatID, err := strconv.ParseInt(data["chatID"], 10, 64)
 			if err != nil {
 				return err
 			}
-			if data != nil && data["chatID"] != "" && data["text"] != "" {
-				chatID, err := strconv.ParseInt(data["chatID"], 10, 64)
-				if err != nil {
-					return err
-				}
-				msg := tgbotapi.NewMessage(chatID, msgs.IconAlarmClock+data["text"])
-				_, err = bot.Send(msg)
-				if err != nil {
-					return err
-				}
-				err = redis.Del(key).Err()
-				if err != nil {
-					return err
-				}
+			msg := tgbotapi.NewMessage(chatID, msgs.IconAlarmClock+data["text"])
+			_, err = bot.Send(msg)
+			if err != nil {
+				return err
+			}
+			err = redis.Del(key).Err()
+			if err != nil {
+				return err
 			}
 		}
 	}

@@ -26,134 +26,136 @@ func TVShowHandleUpdate(
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 ) error {
-	if update.CallbackQuery == nil {
-		mediaType := update.Message.Command()
-		tvShowName := strings.TrimSpace(update.Message.CommandArguments())
-		if tvShowName == "" {
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgTVShow)
-			_, err := bot.Send(msg)
-			return err
+	if update.CallbackQuery != nil {
+		if strings.HasPrefix(update.CallbackQuery.Data, "seasons:") {
+			update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "seasons:")
+			return hasCallback(cfg, update, tvShows)
 		}
-		apiKey := cfg.MovieAcessKey.Key
-		searchClient, err := clients.NewSearchMedia(mediaType, tvShowName, apiKey)
-		if err != nil {
-			return err
-		}
-		_, tvShows, err = searchClient.SearchMedia(mediaType, tvShowName)
-		if err != nil {
-			return err
-		}
-		detailsClient, err := clients.NewGetDetails(mediaType, strconv.Itoa(tvShows[0].ID), apiKey)
-		if err != nil {
-			return err
-		}
-		_, details, err := detailsClient.GetDetails(mediaType, strconv.Itoa(tvShows[0].ID))
-		if err != nil {
-			return err
-		}
-		providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(tvShows[0].ID), apiKey)
-		if err != nil {
-			return err
-		}
-		providers, err := providersClient.SearchProviders(mediaType, strconv.Itoa(tvShows[0].ID))
-		if err != nil {
-			return err
-		}
-		tvShows[0].TVShowDetails = *details
-		tvShows[0].Providers = *providers
-		tvShowMessage, err := getTVShowPictureAndSendMessage(update, tvShows[0])
-		if err != nil {
-			return err
-		}
-		var kb []tgbotapi.InlineKeyboardMarkup
-		if len(tvShows) > 1 {
-			kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "tvshows:1"),
-				),
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData("Detalhes", "tvshows:seasons:0"),
-				),
-			))
-		}
-		if len(tvShows) > 1 {
-			tvShowMessage.ReplyMarkup = kb[0]
-		}
-		if len(tvShows) == 1 {
-			tvShowMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData("Detalhes", "tvshows:seasons:0"),
-				),
-			)
-		}
-		_, err = bot.Send(tvShowMessage)
+		return tvShowArrowButtonsAction(cfg, update, tvShows)
+	}
+	mediaType := update.Message.Command()
+	tvShowName := strings.TrimSpace(update.Message.CommandArguments())
+	if tvShowName == "" {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgTVShow)
+		_, err := bot.Send(msg)
 		return err
 	}
-	if strings.HasPrefix(update.CallbackQuery.Data, "seasons:") {
-		return hasCallback(cfg, update, tvShows)
-	}
-	return tvShowArrowButtonsAction(cfg, update, tvShows)
-}
-
-func hasCallback(cfg *config.Config, update *tgbotapi.Update, tvShows []types.TVShow) error {
-	update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "seasons:")
-	if strings.Contains(update.CallbackQuery.Data, ":") {
-		lastBin := strings.Index(update.CallbackQuery.Data, ":")
-		arrayPos, err := strconv.Atoi(update.CallbackQuery.Data[:lastBin])
-		if err != nil {
-			return err
-		}
-		season, err := strconv.Atoi(strings.TrimPrefix(update.CallbackQuery.Data[lastBin:], ":"))
-		if err != nil {
-			return err
-		}
-		var seasonDetails []string
-		releaseDate, err := time.Parse("2006-01-02", tvShows[arrayPos].TVShowDetails.Seasons[season].AirDate)
-		if err != nil {
-			return err
-		}
-		seasonDetails = append(seasonDetails,
-			"\nNúmero de Episódios: ", strconv.Itoa(tvShows[arrayPos].TVShowDetails.Seasons[season].EpisodesCount),
-			"\nData de Lançamento: ", releaseDate.Format("02/06/2006"),
-		)
-		var msgEdit types.EditMediaJSON
-		msgEdit.ChatID = update.CallbackQuery.Message.Chat.ID
-		msgEdit.MessageID = update.CallbackQuery.Message.MessageID
-		msgEdit.Media.Type = "photo"
-		if tvShows[arrayPos].TVShowDetails.Seasons[season].PosterPath == "" {
-			msgEdit.Media.URL = "https://badybassitt.sp.gov.br/lib/img/no-image.jpg"
-		} else {
-			msgEdit.Media.URL = "https://www.themoviedb.org/t/p/w300_and_h450_bestv2/" + tvShows[arrayPos].TVShowDetails.Seasons[season].PosterPath
-		}
-		msgEdit.Media.Caption = strings.Join(seasonDetails, "")
-		msgEdit.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("Voltar", "tvshows:seasons:"+strconv.Itoa(arrayPos)),
-			),
-		)
-		messageJSON, err := json.Marshal(msgEdit)
-		if err != nil {
-			return err
-		}
-		sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(cfg.Telegram.Key)+"/editmessagemedia",
-			"application/json", bytes.NewBuffer(messageJSON))
-		if err != nil {
-			return err
-		}
-		defer sendMessage.Body.Close()
-		if sendMessage.StatusCode < 200 || sendMessage.StatusCode > 299 {
-			err = fmt.Errorf("Error in post method %w", err)
-			return err
-		}
-
-		return nil
-	}
-	i, err := strconv.Atoi(update.CallbackQuery.Data)
+	apiKey := cfg.MovieAcessKey.Key
+	searchClient, err := clients.NewSearchMedia(mediaType, tvShowName, apiKey)
 	if err != nil {
 		return err
 	}
-	if len(tvShows) != 0 {
-		return sendSeasonKeyboard(cfg, update, tvShows[i])
+	_, tvShows, err = searchClient.SearchMedia(mediaType, tvShowName)
+	if err != nil {
+		return err
+	}
+	if len(tvShows) == 0 {
+		return nil
+	}
+	detailsClient, err := clients.NewGetDetails(mediaType, strconv.Itoa(tvShows[0].ID), apiKey)
+	if err != nil {
+		return err
+	}
+	_, details, err := detailsClient.GetDetails(mediaType, strconv.Itoa(tvShows[0].ID))
+	if err != nil {
+		return err
+	}
+	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(tvShows[0].ID), apiKey)
+	if err != nil {
+		return err
+	}
+	providers, err := providersClient.SearchProviders(mediaType, strconv.Itoa(tvShows[0].ID))
+	if err != nil {
+		return err
+	}
+	tvShows[0].TVShowDetails = *details
+	tvShows[0].Providers = *providers
+	tvShowMessage, err := getTVShowPictureAndSendMessage(update, tvShows[0])
+	if err != nil {
+		return err
+	}
+	var kb []tgbotapi.InlineKeyboardMarkup
+	if len(tvShows) > 1 {
+		kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "tvshows:1"),
+			),
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Detalhes", "tvshows:seasons:0"),
+			),
+		))
+	}
+	if len(tvShows) > 1 {
+		tvShowMessage.ReplyMarkup = kb[0]
+	}
+	if len(tvShows) == 1 {
+		tvShowMessage.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Detalhes", "tvshows:seasons:0"),
+			),
+		)
+	}
+	_, err = bot.Send(tvShowMessage)
+	return err
+}
+
+func hasCallback(cfg *config.Config, update *tgbotapi.Update, tvShows []types.TVShow) error {
+	if !strings.Contains(update.CallbackQuery.Data, ":") {
+		i, err := strconv.Atoi(update.CallbackQuery.Data)
+		if err != nil {
+			return err
+		}
+		if len(tvShows) != 0 {
+			return sendSeasonKeyboard(cfg, update, tvShows[i])
+		}
+	}
+	lastBin := strings.Index(update.CallbackQuery.Data, ":")
+	arrayPos, err := strconv.Atoi(update.CallbackQuery.Data[:lastBin])
+	if err != nil {
+		return err
+	}
+	season, err := strconv.Atoi(strings.TrimPrefix(update.CallbackQuery.Data[lastBin:], ":"))
+	if err != nil {
+		return err
+	}
+	var seasonDetails []string
+	releaseDate, err := time.Parse("2006-01-02", tvShows[arrayPos].TVShowDetails.Seasons[season].AirDate)
+	if err != nil {
+		return err
+	}
+	seasonDetails = append(seasonDetails,
+		"\nNúmero de Episódios: ", strconv.Itoa(tvShows[arrayPos].TVShowDetails.Seasons[season].EpisodesCount),
+		"\nData de Lançamento: ", releaseDate.Format("02/01/2006"),
+	)
+	var msgEdit types.EditMediaJSON
+	msgEdit.ChatID = update.CallbackQuery.Message.Chat.ID
+	msgEdit.MessageID = update.CallbackQuery.Message.MessageID
+	msgEdit.Media.Type = "photo"
+	if tvShows[arrayPos].TVShowDetails.Seasons[season].PosterPath == "" {
+		msgEdit.Media.URL = "https://badybassitt.sp.gov.br/lib/img/no-image.jpg"
+	} else {
+		msgEdit.Media.URL = "https://www.themoviedb.org/t/p/w300_and_h450_bestv2/" +
+			tvShows[arrayPos].TVShowDetails.Seasons[season].PosterPath
+	}
+	msgEdit.Media.Caption = strings.Join(seasonDetails, "")
+	msgEdit.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Voltar", "tvshows:seasons:"+strconv.Itoa(arrayPos)),
+		),
+	)
+	messageJSON, err := json.Marshal(msgEdit)
+	if err != nil {
+		return err
+	}
+	sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(cfg.Telegram.Key)+"/editmessagemedia",
+		"application/json", bytes.NewBuffer(messageJSON))
+	if err != nil {
+		return err
+	}
+	defer sendMessage.Body.Close()
+	if sendMessage.StatusCode < 200 || sendMessage.StatusCode > 299 {
+		err = fmt.Errorf("Error in post method %w", err)
+		return err
 	}
 	return nil
 }
@@ -295,7 +297,7 @@ func getTVShowPictureAndSendMessage(
 		"\nTítulo: "+tvShow.Title,
 		"\nTítulo Original: "+tvShow.OriginalTitle,
 		"\nPopularidade: "+strconv.FormatFloat(tvShow.Popularity, 'f', 2, 64),
-		"\nData de lançamento: "+releaseDate.Format("02/06/2006"),
+		"\nData de lançamento: "+releaseDate.Format("02/01/2006"),
 		"\nNota: "+strconv.FormatFloat(tvShow.TVShowDetails.Rating, 'f', 2, 64),
 	)
 	tvShowSeasonsDetails := getTVShowSeasonDetails(tvShow)
@@ -303,12 +305,16 @@ func getTVShowPictureAndSendMessage(
 	tvShowDirector := getTvShowDirector(tvShow)
 	var tvShowMessage tgbotapi.PhotoConfig
 	if update.CallbackQuery == nil {
-		tvShowMessage = tgbotapi.NewPhotoShare(update.Message.Chat.ID, "https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+tvShow.PosterPath)
+		tvShowMessage = tgbotapi.NewPhotoShare(update.Message.Chat.ID,
+			"https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+tvShow.PosterPath)
 	}
 	if update.CallbackQuery != nil {
-		tvShowMessage = tgbotapi.NewPhotoShare(update.CallbackQuery.Message.Chat.ID, "https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+tvShow.PosterPath)
+		tvShowMessage = tgbotapi.NewPhotoShare(update.CallbackQuery.Message.Chat.ID,
+			"https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+tvShow.PosterPath)
 	}
-	tvShowMessage.Caption = strings.Join(tvShowDetailsMessage, "") + strings.Join(tvShowSeasonsDetails, "") + strings.Join(tvShowProvidersMessage, "") + "\nDiretores: " + strings.Join(tvShowDirector, ",")
+	tvShowMessage.Caption = strings.Join(tvShowDetailsMessage, "") +
+		strings.Join(tvShowSeasonsDetails, "") + strings.Join(tvShowProvidersMessage, "") +
+		"\nDiretores: " + strings.Join(tvShowDirector, ",")
 	return &tvShowMessage, nil
 }
 
@@ -323,26 +329,22 @@ func getTVShowSeasonDetails(tvShow types.TVShow) []string {
 func getTVShowProviders(tvShow types.TVShow) []string {
 	var tvShowProvidersMessage []string
 	if country, ok := tvShow.Providers.Results["BR"]; ok && country != nil {
-		if country.Buy != nil {
-			tvShowProvidersMessage = append(tvShowProvidersMessage, "\nPara Comprar: ")
-			for i, providerBuy := range country.Buy {
-				tvShowProvidersMessage = append(tvShowProvidersMessage, providerBuy.ProviderName)
-				if i == len(country.Buy)-1 {
-					tvShowProvidersMessage = append(tvShowProvidersMessage, ".")
-				} else {
-					tvShowProvidersMessage = append(tvShowProvidersMessage, ", ")
-				}
+		tvShowProvidersMessage = append(tvShowProvidersMessage, "\nPara Comprar: ")
+		for i, providerBuy := range country.Buy {
+			tvShowProvidersMessage = append(tvShowProvidersMessage, providerBuy.ProviderName)
+			if i == len(country.Buy)-1 {
+				tvShowProvidersMessage = append(tvShowProvidersMessage, ".")
+			} else {
+				tvShowProvidersMessage = append(tvShowProvidersMessage, ", ")
 			}
 		}
-		if country.Flatrate != nil {
-			tvShowProvidersMessage = append(tvShowProvidersMessage, "\nServicos de streaming: ")
-			for i, providerFlatrate := range country.Flatrate {
-				tvShowProvidersMessage = append(tvShowProvidersMessage, providerFlatrate.ProviderName)
-				if i == len(country.Flatrate)-1 {
-					tvShowProvidersMessage = append(tvShowProvidersMessage, ".")
-				} else {
-					tvShowProvidersMessage = append(tvShowProvidersMessage, ", ")
-				}
+		tvShowProvidersMessage = append(tvShowProvidersMessage, "\nServicos de streaming: ")
+		for i, providerFlatrate := range country.Flatrate {
+			tvShowProvidersMessage = append(tvShowProvidersMessage, providerFlatrate.ProviderName)
+			if i == len(country.Flatrate)-1 {
+				tvShowProvidersMessage = append(tvShowProvidersMessage, ".")
+			} else {
+				tvShowProvidersMessage = append(tvShowProvidersMessage, ", ")
 			}
 		}
 	}

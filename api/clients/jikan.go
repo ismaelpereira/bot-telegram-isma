@@ -35,6 +35,8 @@ func NewJikanAPI(mediaTitle string, mediaType string) (JikanAPI, error) {
 		api: &jikanAPI{
 			mediaTitle: mediaTitle,
 		},
+		cache: nil,
+		redis: nil,
 	}, nil
 }
 
@@ -48,6 +50,9 @@ func NewMangaAPI(mangaID string, mangaName string) (MangaDetails, error) {
 			ID:    mangaID,
 			title: mangaName,
 		},
+		jpCache:     nil,
+		statusCache: nil,
+		redis:       nil,
 	}, nil
 }
 

@@ -22,12 +22,12 @@ func NewAdmiral(path string) (AdmiralJSON, error) {
 		api: &admiralJSON{
 			path: path,
 		},
-		cache: path,
+		cache: nil,
 	}, nil
 }
 
 func (t *admiralJSON) GetAdmiral(archivePath string) ([]types.Admiral, error) {
-	log.Println("admiral")
+	log.Println("admiral loaded")
 	file, err := os.Open(archivePath)
 	if err != nil {
 		return nil, err

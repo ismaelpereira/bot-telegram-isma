@@ -244,7 +244,7 @@ func sendSeasonKeyboard(cfg *config.Config,
 	if err != nil {
 		return err
 	}
-	var kb [][]tgbotapi.InlineKeyboardButton
+	kb := make([][]tgbotapi.InlineKeyboardButton, 0, len(tvShow.TVShowDetails.Seasons))
 	for s, season := range tvShow.TVShowDetails.Seasons {
 		kb = append(kb, tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(season.Name, "tvshows:seasons:"+strconv.Itoa(i)+":"+strconv.Itoa(s)),
@@ -350,7 +350,7 @@ func getTVShowProviders(tvShow types.TVShow) []string {
 }
 
 func getTvShowDirector(tvShow types.TVShow) []string {
-	var directors []string
+	directors := make([]string, 0, len(tvShow.TVShowDetails.CreatedBy))
 	for _, director := range tvShow.TVShowDetails.CreatedBy {
 		directors = append(directors, director.Name)
 	}

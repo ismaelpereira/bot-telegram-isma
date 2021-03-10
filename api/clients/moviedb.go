@@ -28,6 +28,8 @@ func NewSearchMedia(mediaType string, mediaTitle string, apiKey string) (SearchM
 		api: &theMovieDBAPI{
 			apiKey: apiKey,
 		},
+		cache: nil,
+		redis: nil,
 	}, nil
 }
 
@@ -40,6 +42,8 @@ func NewSearchProviders(mediaType string, mediaID string, apiKey string) (Search
 		api: &theMovieDBAPI{
 			apiKey: apiKey,
 		},
+		cache: nil,
+		redis: nil,
 	}, nil
 }
 
@@ -52,6 +56,8 @@ func NewGetDetails(mediaType string, mediaID string, apiKey string) (GetDetails,
 		api: &theMovieDBAPI{
 			apiKey: apiKey,
 		},
+		cache: nil,
+		redis: nil,
 	}, nil
 }
 
@@ -64,6 +70,8 @@ func NewGetMovieCredits(movieID string, apiKey string) (GetMovieCredits, error) 
 		api: &theMovieDBAPI{
 			apiKey: apiKey,
 		},
+		cache: nil,
+		redis: nil,
 	}, nil
 }
 

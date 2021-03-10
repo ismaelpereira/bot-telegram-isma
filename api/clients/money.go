@@ -26,6 +26,8 @@ func NewMoneyAPI(apiKey string) (MoneyAPI, error) {
 		api: &moneyAPI{
 			apiKey: apiKey,
 		},
+		cache: nil,
+		redis: nil,
 	}, nil
 }
 

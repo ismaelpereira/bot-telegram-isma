@@ -18,7 +18,8 @@ func Wire(
 		return nil, err
 	}
 	bot := &Bot{
-		API: api,
+		API:    api,
+		Update: nil,
 	}
 	return bot, nil
 }

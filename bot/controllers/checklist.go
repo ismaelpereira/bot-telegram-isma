@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/go-redis/redis/v7"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/ismaelpereira/telegram-bot-isma/api/clients"
@@ -70,7 +71,13 @@ func ChecklistHandleUpdate(
 			return err
 		}
 		checklistTitle := itens[0]
-		values := strings.Split(itens[1], ",")
+		if strings.Contains(itens[1], " ") {
+			itens[1] = strings.ReplaceAll(itens[1], " ", "")
+		}
+		spew.Dump(itens)
+		values := strings.Split(strings.TrimSpace(itens[1]), ",")
+		spew.Dump(values)
+
 		var checklist types.Checklist
 		objects := make([]types.ChecklistItem, len(values), cap(values))
 		checklist.Title = checklistTitle
@@ -114,6 +121,11 @@ func ChecklistHandleUpdate(
 				tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i+1)+". "+strings.TrimPrefix(list, "checklist:"+chatID+":"), list),
 			))
 		}
+		if len(kb) < 1 {
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Você não tem listas ainda, adicione uma para aparecer aqui\n")
+			_, err = bot.Send(msg)
+			return err
+		}
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "**CHECKLISTS**\n")
 		kbComplete.InlineKeyboard = kb
 		msg.ReplyMarkup = kbComplete
@@ -126,9 +138,13 @@ func ChecklistHandleUpdate(
 func checklistCallback(
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update) error {
-	var message []string
 	values, err := clients.GetReminder(update.CallbackQuery.Data)
 	if err != nil {
+		return err
+	}
+	if len(values) == 0 && cap(values) == 0 {
+		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Você não adiciou itens nessa lista, adicione um para ativar o botão\n")
+		_, err = bot.Send(msg)
 		return err
 	}
 	var data types.Checklist
@@ -136,7 +152,8 @@ func checklistCallback(
 	if err != nil {
 		return err
 	}
-	var kb [][]tgbotapi.InlineKeyboardButton
+	message := make([]string, 0, len(data.Itens))
+	kb := make([][]tgbotapi.InlineKeyboardButton, 0, len(data.Itens))
 	for i, item := range data.Itens {
 		var symbol string
 		if !item.IsChecked {
@@ -160,7 +177,6 @@ func checklistCallback(
 func checkItem(
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update) error {
-	var message []string
 	chatID := strconv.FormatInt(update.CallbackQuery.Message.Chat.ID, 10)
 	update.CallbackQuery.Data = strings.TrimPrefix(update.CallbackQuery.Data, "checklist:")
 	lastBin := strings.Index(update.CallbackQuery.Data, ":")
@@ -180,6 +196,7 @@ func checkItem(
 	if err != nil {
 		return err
 	}
+	message := make([]string, 0, len(list.Itens))
 	for i, item := range list.Itens {
 		var symbol string
 		if !item.IsChecked {

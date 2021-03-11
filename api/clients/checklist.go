@@ -4,19 +4,14 @@ import (
 	"log"
 	"strings"
 
-	"github.com/ismaelpereira/telegram-bot-isma/config"
-	r "github.com/ismaelpereira/telegram-bot-isma/redis"
+	"github.com/ismaelpereira/telegram-bot-isma/api/common"
 )
 
 func NewReminder(
 	chatID string,
 	reminderTitle string,
 ) error {
-	cfg, err := config.Wire()
-	if err != nil {
-		return err
-	}
-	redis, err := r.Wire(cfg)
+	redis, err := common.SetRedis()
 	if err != nil {
 		return err
 	}
@@ -32,11 +27,7 @@ func AddReminder(
 	reminderTitle string,
 	values []byte,
 ) error {
-	cfg, err := config.Wire()
-	if err != nil {
-		return err
-	}
-	redis, err := r.Wire(cfg)
+	redis, err := common.SetRedis()
 	if err != nil {
 		return err
 	}
@@ -50,11 +41,7 @@ func AddReminder(
 func ListReminder(
 	chatID string,
 ) ([]string, error) {
-	cfg, err := config.Wire()
-	if err != nil {
-		return nil, err
-	}
-	redis, err := r.Wire(cfg)
+	redis, err := common.SetRedis()
 	if err != nil {
 		return nil, err
 	}
@@ -70,11 +57,7 @@ func DeleteReminder(
 	chatID string,
 	reminderTitle string,
 ) error {
-	cfg, err := config.Wire()
-	if err != nil {
-		return err
-	}
-	redis, err := r.Wire(cfg)
+	redis, err := common.SetRedis()
 	if err != nil {
 		return err
 	}
@@ -86,11 +69,7 @@ func DeleteReminder(
 }
 
 func GetReminder(reminderTitle string) ([]byte, error) {
-	cfg, err := config.Wire()
-	if err != nil {
-		return nil, err
-	}
-	redis, err := r.Wire(cfg)
+	redis, err := common.SetRedis()
 	if err != nil {
 		return nil, err
 	}

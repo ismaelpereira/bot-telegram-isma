@@ -40,36 +40,11 @@ func TVShowHandleUpdate(
 		_, err := bot.Send(msg)
 		return err
 	}
-	apiKey := cfg.MovieAcessKey.Key
-	searchClient, err := clients.NewSearchMedia(mediaType, tvShowName, apiKey)
+	var err error
+	tvShows, err = callTVShowsfunc(cfg, update, mediaType, tvShowName)
 	if err != nil {
 		return err
 	}
-	_, tvShows, err = searchClient.SearchMedia(mediaType, tvShowName)
-	if err != nil {
-		return err
-	}
-	if len(tvShows) == 0 {
-		return nil
-	}
-	detailsClient, err := clients.NewGetDetails(mediaType, strconv.Itoa(tvShows[0].ID), apiKey)
-	if err != nil {
-		return err
-	}
-	_, details, err := detailsClient.GetDetails(mediaType, strconv.Itoa(tvShows[0].ID))
-	if err != nil {
-		return err
-	}
-	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(tvShows[0].ID), apiKey)
-	if err != nil {
-		return err
-	}
-	providers, err := providersClient.SearchProviders(mediaType, strconv.Itoa(tvShows[0].ID))
-	if err != nil {
-		return err
-	}
-	tvShows[0].TVShowDetails = *details
-	tvShows[0].Providers = *providers
 	tvShowMessage, err := getTVShowPictureAndSendMessage(update, tvShows[0])
 	if err != nil {
 		return err
@@ -170,25 +145,10 @@ func tvShowArrowButtonsAction(
 	if err != nil {
 		return err
 	}
-	apiKey := cfg.MovieAcessKey.Key
-	detailsClient, err := clients.NewGetDetails(mediaType, strconv.Itoa(tvShows[i].ID), apiKey)
+	tvShows, err = callTVShowsfunc(cfg, update, mediaType, tvShows[i].Title)
 	if err != nil {
 		return err
 	}
-	_, details, err := detailsClient.GetDetails(mediaType, strconv.Itoa(tvShows[i].ID))
-	if err != nil {
-		return err
-	}
-	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(tvShows[i].ID), apiKey)
-	if err != nil {
-		return err
-	}
-	providers, err := providersClient.SearchProviders(mediaType, strconv.Itoa(tvShows[i].ID))
-	if err != nil {
-		return err
-	}
-	tvShows[i].TVShowDetails = *details
-	tvShows[i].Providers = *providers
 	tvShowMessage, err := getTVShowPictureAndSendMessage(update, tvShows[i])
 	if err != nil {
 		return err
@@ -360,4 +320,50 @@ func getTvShowDirector(tvShow types.TVShow) []string {
 		directors = append(directors, "-")
 	}
 	return directors
+}
+
+func callTVShowsfunc(
+	cfg *config.Config,
+	update *tgbotapi.Update,
+	mediaType string,
+	mediaTitle string,
+) ([]types.TVShow, error) {
+	var arrayPos int
+	var err error
+	apiKey := cfg.MovieAcessKey.Key
+	if update.CallbackQuery == nil {
+		searchClient, err := clients.NewSearchMedia(mediaType, mediaTitle, apiKey)
+		if err != nil {
+			return nil, err
+		}
+		_, tvShows, err = searchClient.SearchMedia(mediaType, mediaTitle)
+		if err != nil {
+			return nil, err
+		}
+		if len(tvShows) == 0 {
+			err = fmt.Errorf("No film results: %w", err)
+			return nil, err
+		}
+	} else if arrayPos, err = strconv.Atoi(update.CallbackQuery.Data); err != nil {
+		return nil, err
+	}
+	detailsClient, err := clients.NewGetDetails(mediaType, strconv.Itoa(tvShows[arrayPos].ID), apiKey)
+	if err != nil {
+		return nil, err
+	}
+	_, details, err := detailsClient.GetDetails(mediaType, strconv.Itoa(tvShows[arrayPos].ID))
+	if err != nil {
+		return nil, err
+	}
+	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(tvShows[arrayPos].ID), apiKey)
+	if err != nil {
+		return nil, err
+	}
+	providers, err := providersClient.SearchProviders(mediaType, strconv.Itoa(tvShows[arrayPos].ID))
+	if err != nil {
+		return nil, err
+	}
+	tvShows[arrayPos].TVShowDetails = *details
+	tvShows[arrayPos].Providers = *providers
+	return tvShows, nil
 }

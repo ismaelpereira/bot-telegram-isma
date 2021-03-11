@@ -9,6 +9,7 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/api/clients"
 	"github.com/ismaelpereira/telegram-bot-isma/bot/msgs"
 	"github.com/ismaelpereira/telegram-bot-isma/config"
+	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
 var moneyAPI clients.MoneyAPI
@@ -69,25 +70,37 @@ func MoneyHandleUpdate(
 	if err != nil {
 		return err
 	}
-	if !strings.EqualFold(commandSplit[1], "EUR") && !strings.EqualFold(commandSplit[2], "EUR") {
-		currency := ((1 / moneyResults.Rates[commandSplit[1]]) * moneyResults.Rates[commandSplit[2]]) * amount
+	err = calculateCurrency(bot, update, moneyResults, amount, commandValue, currencyToConvert, currencyConverted)
+	return err
+}
+
+func calculateCurrency(bot *tgbotapi.BotAPI,
+	update *tgbotapi.Update,
+	moneyResults *types.MoneySearchResult,
+	amount float64,
+	commandValue string,
+	currencyToConvert string,
+	currencyConverted string,
+) error {
+	if !strings.EqualFold(currencyToConvert, "EUR") && !strings.EqualFold(currencyConverted, "EUR") {
+		currency := ((1 / moneyResults.Rates[currencyToConvert]) * moneyResults.Rates[currencyConverted]) * amount
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+
 			" to "+currencyConverted+" --> "+strconv.FormatFloat(currency, 'f', 2, 64))
-		_, err = bot.Send(msg)
+		_, err := bot.Send(msg)
 		return err
 	}
-	if strings.EqualFold(commandSplit[1], "EUR") {
-		currency := moneyResults.Rates[commandSplit[2]] * amount
+	if strings.EqualFold(currencyToConvert, "EUR") {
+		currency := moneyResults.Rates[currencyConverted] * amount
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+
 			" to "+currencyConverted+" --> "+strconv.FormatFloat(currency, 'f', 2, 64))
-		_, err = bot.Send(msg)
+		_, err := bot.Send(msg)
 		return err
 	}
-	if strings.EqualFold(commandSplit[2], "EUR") {
-		currency := (1 / moneyResults.Rates[commandSplit[1]]) * amount
+	if strings.EqualFold(currencyConverted, "EUR") {
+		currency := (1 / moneyResults.Rates[currencyToConvert]) * amount
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, commandValue+" "+currencyToConvert+
 			" to "+currencyConverted+" --> "+strconv.FormatFloat(currency, 'f', 2, 64))
-		_, err = bot.Send(msg)
+		_, err := bot.Send(msg)
 		return err
 	}
 	return nil

@@ -12,8 +12,7 @@ import (
 
 	"github.com/go-redis/redis/v7"
 
-	"github.com/ismaelpereira/telegram-bot-isma/config"
-	r "github.com/ismaelpereira/telegram-bot-isma/redis"
+	"github.com/ismaelpereira/telegram-bot-isma/api/common"
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
@@ -61,17 +60,15 @@ func (t *jikanAPI) SearchAnimeOrManga(mediaTitle string, mediaType string) ([]ty
 	var apiResult *http.Response
 	var err error
 	if mediaType == "animes" {
-		apiResult, err = http.Get("https://api.jikan.moe/v3/search/anime?q=" +
-			url.QueryEscape(mediaTitle) + "&page=1")
-		if err != nil {
+		if apiResult, err = http.Get("https://api.jikan.moe/v3/search/anime?q=" +
+			url.QueryEscape(mediaTitle) + "&page=1"); err != nil {
 			return nil, nil, err
 		}
 		defer apiResult.Body.Close()
 	}
 	if mediaType == "mangas" {
-		apiResult, err = http.Get("https://api.jikan.moe/v3/search/manga?q=" +
-			url.QueryEscape(mediaTitle) + "&page=1")
-		if err != nil {
+		if apiResult, err = http.Get("https://api.jikan.moe/v3/search/manga?q=" +
+			url.QueryEscape(mediaTitle) + "&page=1"); err != nil {
 			return nil, nil, err
 		}
 		defer apiResult.Body.Close()
@@ -87,16 +84,14 @@ func (t *jikanAPI) SearchAnimeOrManga(mediaTitle string, mediaType string) ([]ty
 	}
 	if mediaType == "animes" {
 		var animes []types.Anime
-		err = json.Unmarshal(jikanResults.Data, &animes)
-		if err != nil {
+		if err = json.Unmarshal(jikanResults.Data, &animes); err != nil {
 			return nil, nil, err
 		}
 		return nil, animes, nil
 	}
 	if mediaType == "mangas" {
 		var mangas []types.Manga
-		err = json.Unmarshal(jikanResults.Data, &mangas)
-		if err != nil {
+		if err = json.Unmarshal(jikanResults.Data, &mangas); err != nil {
 			return nil, nil, err
 		}
 		return mangas, nil, nil
@@ -162,11 +157,8 @@ func (t *mangaAPICached) GetMangaPageDetails(mangaID string, mangaName string) (
 }
 
 func (t *mangaAPICached) searchRedisDetailsKeys(mangaName string) error {
-	cfg, err := config.Wire()
-	if err != nil {
-		return err
-	}
-	t.redis, err = r.Wire(cfg)
+	var err error
+	t.redis, err = common.SetRedis()
 	if err != nil {
 		return err
 	}
@@ -205,15 +197,12 @@ type jikanAPICached struct {
 
 func (t *jikanAPICached) SearchAnimeOrManga(mediaTitle string, mediaType string) ([]types.Manga, []types.Anime, error) {
 	log.Println("jikan api cached")
-	cfg, err := config.Wire()
+	var err error
+	t.redis, err = common.SetRedis()
 	if err != nil {
 		return nil, nil, err
 	}
-	t.redis, err = r.Wire(cfg)
-	if err != nil {
-		return nil, nil, err
-	}
-	cache, err := SearchItem(t.redis, mediaType, mediaTitle)
+	cache, err := common.SearchItens(t.redis, mediaType, mediaTitle)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -258,63 +247,4 @@ func (t *jikanAPICached) SearchAnimeOrManga(mediaTitle string, mediaType string)
 		return resManga, nil, nil
 	}
 	return nil, nil, nil
-}
-
-func SearchItem(redis *redis.Client, mediaType string, mediaTitle string) (interface{}, error) {
-	keys, err := redis.Keys("telegram:" + mediaType + ":*").Result()
-	if err != nil {
-		return nil, err
-	}
-	if len(keys) == 0 {
-		return nil, nil
-	}
-	var cache interface{}
-	for _, key := range keys {
-		if strings.TrimPrefix(key, "telegram:"+mediaType+":") != mediaTitle {
-			continue
-		}
-		var animeMedia []types.Anime
-		var mangaMedia []types.Manga
-		var movieMedia []types.Movie
-		var tvShowMedia []types.TVShow
-		data, err := redis.Get(key).Bytes()
-		if err != nil {
-			return nil, err
-		}
-		switch mediaType {
-		case "animes":
-			{
-				err = json.Unmarshal(data, &animeMedia)
-				if err != nil {
-					return nil, err
-				}
-				cache = animeMedia
-			}
-		case "mangas":
-			{
-				err = json.Unmarshal(data, &mangaMedia)
-				if err != nil {
-					return nil, err
-				}
-				cache = mangaMedia
-			}
-		case "movies":
-			{
-				err = json.Unmarshal(data, &movieMedia)
-				if err != nil {
-					return nil, err
-				}
-				cache = movieMedia
-			}
-		case "tvshows":
-			{
-				err = json.Unmarshal(data, &tvShowMedia)
-				if err != nil {
-					return nil, err
-				}
-				cache = tvShowMedia
-			}
-		}
-	}
-	return cache, nil
 }

@@ -9,8 +9,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v7"
-	"github.com/ismaelpereira/telegram-bot-isma/config"
-	r "github.com/ismaelpereira/telegram-bot-isma/redis"
+	"github.com/ismaelpereira/telegram-bot-isma/api/common"
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
@@ -82,11 +81,8 @@ func (t *moneyAPICached) GetCurrencies() (*types.MoneySearchResult, error) {
 }
 
 func (t *moneyAPICached) getMoneyKeys() error {
-	cfg, err := config.Wire()
-	if err != nil {
-		return err
-	}
-	t.redis, err = r.Wire(cfg)
+	var err error
+	t.redis, err = common.SetRedis()
 	if err != nil {
 		return err
 	}

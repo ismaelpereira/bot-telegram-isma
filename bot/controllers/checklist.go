@@ -50,94 +50,110 @@ func ChecklistHandleUpdate(
 	switch args[0] {
 	case "new":
 		{
-			chatID := strconv.FormatInt(update.Message.Chat.ID, 10)
-			title := strings.Join(args[1:], " ")
-			err := clients.NewReminder(chatID, title)
-			if err != nil {
-				return err
-			}
-			messageText := "Checklist criado com sucesso!\nCom o titulo: " + title
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, messageText)
-			_, err = bot.Send(msg)
-			return err
+			return caseNew(bot, update, args)
 		}
 	case "add":
 		{
-			chatID := strconv.FormatInt(update.Message.Chat.ID, 10)
-			keywords := strings.Join(args[1:], " ")
-			itens := strings.Fields(keywords)
-			if len(itens) < 2 {
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID,
-					"Você digitou o comando errado. Não foi possível completar a solicitação")
-				_, err := bot.Send(msg)
-				return err
-			}
-			checklistTitle := itens[0]
-			if strings.Contains(itens[1], " ") {
-				itens[1] = strings.ReplaceAll(itens[1], " ", "")
-			}
-			spew.Dump(itens)
-			values := strings.Split(strings.TrimSpace(itens[1]), ",")
-			spew.Dump(values)
-
-			var checklist types.Checklist
-			objects := make([]types.ChecklistItem, len(values), cap(values))
-			checklist.Title = checklistTitle
-			for i, itens := range values {
-				objects[i].Name = itens
-			}
-			checklist.Itens = objects
-			listJSON, err := json.Marshal(checklist)
-			if err != nil {
-				return err
-			}
-			if err = clients.AddReminder(chatID, checklistTitle, listJSON); err != nil {
-				return err
-			}
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Itens adicionados com sucesso!")
-			_, err = bot.Send(msg)
-			return err
+			return caseAdd(bot, update, args)
 		}
 	case "delete":
 		{
-			chatID := strconv.FormatInt(update.Message.Chat.ID, 10)
-			title := strings.Join(args[1:], " ")
-			err := clients.DeleteReminder(chatID, title)
-			if err != nil {
-				return err
-			}
-			messageText := "Checklist com o titulo " + title + " deletada com sucesso!"
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, messageText)
-			_, err = bot.Send(msg)
-			return err
+			return caseDelete(bot, update, args)
 		}
 	case "list":
 		{
-			chatID := strconv.FormatInt(update.Message.Chat.ID, 10)
-			list, err := clients.ListReminder(chatID)
-			if err != nil {
-				return err
-			}
-			var kb [][]tgbotapi.InlineKeyboardButton
-			for i, list := range list {
-				kb = append(kb, tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i+1)+
-						". "+strings.TrimPrefix(list, "checklist:"+chatID+":"), list),
-				))
-			}
-			if len(kb) < 1 {
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Você não tem listas ainda, adicione uma para aparecer aqui\n")
-				_, err = bot.Send(msg)
-				return err
-			}
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "**CHECKLISTS**\n")
-			kbComplete.InlineKeyboard = kb
-			msg.ReplyMarkup = kbComplete
-			_, err = bot.Send(msg)
-			return err
+			return caseList(bot, update)
 		}
 	}
 	return nil
+}
+
+func caseNew(bot *tgbotapi.BotAPI, update *tgbotapi.Update, args []string) error {
+	chatID := strconv.FormatInt(update.Message.Chat.ID, 10)
+	title := strings.Join(args[1:], " ")
+	err := clients.NewReminder(chatID, title)
+	if err != nil {
+		return err
+	}
+	messageText := "Checklist criado com sucesso!\nCom o titulo: " + title
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, messageText)
+	_, err = bot.Send(msg)
+	return err
+}
+
+func caseAdd(bot *tgbotapi.BotAPI, update *tgbotapi.Update, args []string) error {
+	chatID := strconv.FormatInt(update.Message.Chat.ID, 10)
+	keywords := strings.Join(args[1:], " ")
+	itens := strings.Fields(keywords)
+	if len(itens) < 2 {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
+			"Você digitou o comando errado. Não foi possível completar a solicitação")
+		_, err := bot.Send(msg)
+		return err
+	}
+	checklistTitle := itens[0]
+	if strings.Contains(itens[1], " ") {
+		itens[1] = strings.ReplaceAll(itens[1], " ", "")
+	}
+	spew.Dump(itens)
+	values := strings.Split(strings.TrimSpace(itens[1]), ",")
+	spew.Dump(values)
+
+	var checklist types.Checklist
+	objects := make([]types.ChecklistItem, len(values), cap(values))
+	checklist.Title = checklistTitle
+	for i, itens := range values {
+		objects[i].Name = itens
+	}
+	checklist.Itens = objects
+	listJSON, err := json.Marshal(checklist)
+	if err != nil {
+		return err
+	}
+	if err = clients.AddReminder(chatID, checklistTitle, listJSON); err != nil {
+		return err
+	}
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Itens adicionados com sucesso!")
+	_, err = bot.Send(msg)
+	return err
+}
+
+func caseDelete(bot *tgbotapi.BotAPI, update *tgbotapi.Update, args []string) error {
+	chatID := strconv.FormatInt(update.Message.Chat.ID, 10)
+	title := strings.Join(args[1:], " ")
+	err := clients.DeleteReminder(chatID, title)
+	if err != nil {
+		return err
+	}
+	messageText := "Checklist com o titulo " + title + " deletada com sucesso!"
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, messageText)
+	_, err = bot.Send(msg)
+	return err
+}
+
+func caseList(bot *tgbotapi.BotAPI, update *tgbotapi.Update) error {
+	chatID := strconv.FormatInt(update.Message.Chat.ID, 10)
+	list, err := clients.ListReminder(chatID)
+	if err != nil {
+		return err
+	}
+	kb := make([][]tgbotapi.InlineKeyboardButton, 0, len(list))
+	for i, list := range list {
+		kb = append(kb, tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i+1)+
+				". "+strings.TrimPrefix(list, "checklist:"+chatID+":"), list),
+		))
+	}
+	if len(kb) < 1 {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Você não tem listas ainda, adicione uma para aparecer aqui\n")
+		_, err = bot.Send(msg)
+		return err
+	}
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "**CHECKLISTS**\n")
+	kbComplete.InlineKeyboard = kb
+	msg.ReplyMarkup = kbComplete
+	_, err = bot.Send(msg)
+	return err
 }
 
 func checklistCallback(

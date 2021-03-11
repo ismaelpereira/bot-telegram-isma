@@ -37,45 +37,11 @@ func MoviesHandleUpdate(
 		_, err := bot.Send(msg)
 		return err
 	}
-	apiKey := cfg.MovieAcessKey.Key
-	searchClient, err := clients.NewSearchMedia(mediaType, movieName, apiKey)
+	var err error
+	movies, err = callMovieFunctions(cfg, update, mediaType, movieName)
 	if err != nil {
 		return err
 	}
-	movies, _, err = searchClient.SearchMedia(mediaType, movieName)
-	if err != nil {
-		return err
-	}
-	if len(movies) == 0 {
-		return nil
-	}
-	detailsClient, err := clients.NewGetDetails(mediaType, strconv.Itoa(movies[0].ID), apiKey)
-	if err != nil {
-		return err
-	}
-	details, _, err := detailsClient.GetDetails(mediaType, strconv.Itoa(movies[0].ID))
-	if err != nil {
-		return err
-	}
-	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(movies[0].ID), apiKey)
-	if err != nil {
-		return err
-	}
-	providers, err := providersClient.SearchProviders(mediaType, strconv.Itoa(movies[0].ID))
-	if err != nil {
-		return err
-	}
-	directorsClient, err := clients.NewGetMovieCredits(strconv.Itoa(movies[0].ID), apiKey)
-	if err != nil {
-		return err
-	}
-	credits, err := directorsClient.GetMovieCredits(strconv.Itoa(movies[0].ID))
-	if err != nil {
-		return err
-	}
-	movies[0].Details = *details
-	movies[0].Providers = *providers
-	movies[0].Credits = *credits
 	movieMessage, err := getMoviesPictureAndSendMessage(update, movies[0])
 	if err != nil {
 		return err
@@ -105,34 +71,10 @@ func movieArrowButtonsAction(
 	if err != nil {
 		return err
 	}
-	apiKey := cfg.MovieAcessKey.Key
-	detailsClient, err := clients.NewGetDetails(mediaType, strconv.Itoa(movies[i].ID), apiKey)
+	movies, err = callMovieFunctions(cfg, update, mediaType, movies[i].Title)
 	if err != nil {
 		return err
 	}
-	details, _, err := detailsClient.GetDetails(mediaType, strconv.Itoa(movies[i].ID))
-	if err != nil {
-		return err
-	}
-	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(movies[i].ID), apiKey)
-	if err != nil {
-		return err
-	}
-	providers, err := providersClient.SearchProviders(mediaType, strconv.Itoa(movies[i].ID))
-	if err != nil {
-		return err
-	}
-	directorsClient, err := clients.NewGetMovieCredits(strconv.Itoa(movies[i].ID), apiKey)
-	if err != nil {
-		return err
-	}
-	credits, err := directorsClient.GetMovieCredits(strconv.Itoa(movies[i].ID))
-	if err != nil {
-		return err
-	}
-	movies[i].Details = *details
-	movies[i].Providers = *providers
-	movies[i].Credits = *credits
 	movieMessage, err := getMoviesPictureAndSendMessage(update, movies[i])
 	if err != nil {
 		return err
@@ -263,4 +205,59 @@ func getMovieDirector(mov types.Movie) []string {
 		}
 	}
 	return directors
+}
+
+func callMovieFunctions(
+	cfg *config.Config,
+	update *tgbotapi.Update,
+	mediaType string,
+	mediaTitle string,
+) ([]types.Movie, error) {
+	var arrayPos int
+	var err error
+	apiKey := cfg.MovieAcessKey.Key
+	if update.CallbackQuery == nil {
+		searchClient, err := clients.NewSearchMedia(mediaType, mediaTitle, apiKey)
+		if err != nil {
+			return nil, err
+		}
+		movies, _, err = searchClient.SearchMedia(mediaType, mediaTitle)
+		if err != nil {
+			return nil, err
+		}
+		if len(movies) == 0 {
+			err = fmt.Errorf("No film results: %w", err)
+			return nil, err
+		}
+	} else if arrayPos, err = strconv.Atoi(update.CallbackQuery.Data); err != nil {
+		return nil, err
+	}
+	detailsClient, err := clients.NewGetDetails(mediaType, strconv.Itoa(movies[arrayPos].ID), apiKey)
+	if err != nil {
+		return nil, err
+	}
+	details, _, err := detailsClient.GetDetails(mediaType, strconv.Itoa(movies[arrayPos].ID))
+	if err != nil {
+		return nil, err
+	}
+	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(movies[arrayPos].ID), apiKey)
+	if err != nil {
+		return nil, err
+	}
+	providers, err := providersClient.SearchProviders(mediaType, strconv.Itoa(movies[arrayPos].ID))
+	if err != nil {
+		return nil, err
+	}
+	directorsClient, err := clients.NewGetMovieCredits(strconv.Itoa(movies[arrayPos].ID), apiKey)
+	if err != nil {
+		return nil, err
+	}
+	credits, err := directorsClient.GetMovieCredits(strconv.Itoa(movies[arrayPos].ID))
+	if err != nil {
+		return nil, err
+	}
+	movies[arrayPos].Details = *details
+	movies[arrayPos].Providers = *providers
+	movies[arrayPos].Credits = *credits
+	return movies, nil
 }

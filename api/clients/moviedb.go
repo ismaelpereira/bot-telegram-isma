@@ -10,8 +10,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v7"
-	"github.com/ismaelpereira/telegram-bot-isma/config"
-	r "github.com/ismaelpereira/telegram-bot-isma/redis"
+	"github.com/ismaelpereira/telegram-bot-isma/api/common"
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
@@ -237,22 +236,16 @@ type movieAPICached struct {
 
 func (t *movieAPICached) SearchMedia(mediaType string, mediaTitle string) ([]types.Movie, []types.TVShow, error) {
 	log.Println("moviedb api cached")
-	cfg, err := config.Wire()
+	var err error
+	t.redis, err = common.SetRedis()
 	if err != nil {
 		return nil, nil, err
 	}
-	t.redis, err = r.Wire(cfg)
-	if err != nil {
-		return nil, nil, err
-	}
-	cache, err := SearchItem(t.redis, mediaType, mediaTitle)
+	cache, err := common.SearchItens(t.redis, mediaType, mediaTitle)
 	if err != nil {
 		return nil, nil, err
 	}
 	t.cache = cache
-	if err != nil {
-		return nil, nil, err
-	}
 	var resJSON []byte
 	if mediaType == "movies" {
 		if t.cache != nil {
@@ -328,11 +321,8 @@ func (t *providersCached) SearchProviders(mediaType string, mediaID string) (*ty
 }
 
 func (t *providersCached) searchRedisProvidersKeys(mediaType string, mediaID string) error {
-	cfg, err := config.Wire()
-	if err != nil {
-		return err
-	}
-	t.redis, err = r.Wire(cfg)
+	var err error
+	t.redis, err = common.SetRedis()
 	if err != nil {
 		return err
 	}
@@ -418,11 +408,8 @@ func (t *detailsCached) GetDetails(
 }
 
 func (t *detailsCached) searchDetailsKeys(mediaType string, mediaID string) error {
-	cfg, err := config.Wire()
-	if err != nil {
-		return err
-	}
-	t.redis, err = r.Wire(cfg)
+	var err error
+	t.redis, err = common.SetRedis()
 	if err != nil {
 		return err
 	}
@@ -495,11 +482,8 @@ func (t *moviesCreditCached) GetMovieCredits(movieID string) (*types.MovieCredit
 }
 
 func (t *moviesCreditCached) getCreditKeys(movieID string) error {
-	cfg, err := config.Wire()
-	if err != nil {
-		return err
-	}
-	t.redis, err = r.Wire(cfg)
+	var err error
+	t.redis, err = common.SetRedis()
 	if err != nil {
 		return err
 	}

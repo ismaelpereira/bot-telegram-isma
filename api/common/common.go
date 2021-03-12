@@ -103,3 +103,9 @@ func SetRedisKeyDetails(resJSON []byte, redis *redis.Client, mediaType string, m
 	err := redis.Set(key, resJSON, 72*time.Hour).Err()
 	return err
 }
+
+func SetRedisKeyMovieCredits(resJSON []byte, redis *redis.Client, movieID string) error {
+	key := "telegram:movies:credits:" + movieID
+	err := redis.Set(key, resJSON, 72*time.Hour).Err()
+	return err
+}

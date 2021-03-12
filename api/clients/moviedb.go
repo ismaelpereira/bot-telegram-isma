@@ -19,7 +19,7 @@ type theMovieDBAPI struct {
 }
 
 type SearchMedia interface {
-	SearchMedia(string, string) ([]types.Movie, []types.TVShow, error)
+	SearchMedia(string, string) (interface{}, error)
 }
 
 func NewSearchMedia(mediaType string, mediaTitle string, apiKey string) (SearchMedia, error) {
@@ -47,7 +47,7 @@ func NewSearchProviders(mediaType string, mediaID string, apiKey string) (Search
 }
 
 type GetDetails interface {
-	GetDetails(string, string) (*types.MovieDetails, *types.TVShowDetails, error)
+	GetDetails(string, string) (interface{}, error)
 }
 
 func NewGetDetails(mediaType string, mediaID string, apiKey string) (GetDetails, error) {
@@ -77,54 +77,48 @@ func NewGetMovieCredits(movieID string, apiKey string) (GetMovieCredits, error) 
 func (t *theMovieDBAPI) SearchMedia(
 	mediaType string,
 	mediaTitle string,
-) ([]types.Movie, []types.TVShow, error) {
+) (interface{}, error) {
 	log.Println("moviedb api")
-	var movieAPI *http.Response
-	var err error
-	var theMovieResult types.MovieDBResponse
 	if mediaType == "movies" {
-		movieAPI, err = http.Get("https://api.themoviedb.org/3/search/movie?api_key=" + url.QueryEscape(t.apiKey) +
-			"&page=1&langague=pt-br&query=" + url.QueryEscape(mediaTitle))
-		if err != nil {
-			return nil, nil, err
-		}
-		defer movieAPI.Body.Close()
-		searchResults, err := ioutil.ReadAll(movieAPI.Body)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = json.Unmarshal(searchResults, &theMovieResult)
-		if err != nil {
-			return nil, nil, err
-		}
 		var movies []types.Movie
-		err = json.Unmarshal(theMovieResult.Data, &movies)
-		if err != nil {
-			return nil, nil, err
+		url := "https://api.themoviedb.org/3/search/movie?api_key=" +
+			url.QueryEscape(t.apiKey) +
+			"&page=1&langague=pt-br&query=" + url.QueryEscape(mediaTitle)
+		if err := t.httpGET(url, &movies); err != nil {
+			return nil, err
 		}
-		return movies, nil, nil
 	}
-	movieAPI, err = http.Get("https://api.themoviedb.org/3/search/tv?api_key=" + url.QueryEscape(t.apiKey) +
-		"&language=pt-BR&page=1&query=" + url.QueryEscape(mediaTitle))
-	if err != nil {
-		return nil, nil, err
+	if mediaType == "tvshows" {
+		var tvShows []types.TVShow
+		url := "https://api.themoviedb.org/3/search/tv?api_key=" +
+			url.QueryEscape(t.apiKey) +
+			"&page=1&langague=pt-br&query=" + url.QueryEscape(mediaTitle)
+		if err := t.httpGET(url, &tvShows); err != nil {
+			return nil, err
+		}
 	}
-	defer movieAPI.Body.Close()
-	searchResults, err := ioutil.ReadAll(movieAPI.Body)
-	if err != nil {
-		return nil, nil, err
-	}
-	err = json.Unmarshal(searchResults, &theMovieResult)
-	if err != nil {
-		return nil, nil, err
-	}
+	return nil, nil
+}
 
-	var tvshows []types.TVShow
-	err = json.Unmarshal(theMovieResult.Data, &tvshows)
-	if err != nil {
-		return nil, nil, err
+func (t *theMovieDBAPI) httpGET(url string, v interface{}) error {
+	var apiResult *http.Response
+	var err error
+	if apiResult, err = http.Get(url); err != nil {
+		return err
 	}
-	return nil, tvshows, nil
+	defer apiResult.Body.Close()
+	searchResult, err := ioutil.ReadAll(apiResult.Body)
+	if err != nil {
+		return err
+	}
+	var theMovieResult types.MovieDBResponse
+	if err = json.Unmarshal(searchResult, &theMovieResult); err != nil {
+		return err
+	}
+	if err = json.Unmarshal(theMovieResult.Data, &v); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (t *theMovieDBAPI) SearchProviders(
@@ -167,47 +161,44 @@ func (t *theMovieDBAPI) SearchProviders(
 func (t *theMovieDBAPI) GetDetails(
 	mediaType string,
 	mediaID string,
-) (*types.MovieDetails, *types.TVShowDetails, error) {
+) (interface{}, error) {
 	log.Println("gettin details")
-	var resDetails *http.Response
+	if mediaType == "movies" {
+		var details []types.MovieDetails
+		url := "https://api.themoviedb.org/3/movie/" + url.QueryEscape(mediaID) +
+			"?api_key=" + url.QueryEscape(t.apiKey) + "&language=pt_BR"
+		if err := t.httpGETDetails(url, details); err != nil {
+			return nil, err
+		}
+	}
+	if mediaType == "tvshows" {
+		var details []types.TVShowDetails
+		url := "https://api.themoviedb.org/3/tv/" + url.QueryEscape(mediaID) +
+			"?api_key=" + url.QueryEscape(t.apiKey) + "&language=pt_BR"
+		if err := t.httpGETDetails(url, details); err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
+}
+
+func (t *theMovieDBAPI) httpGETDetails(url string, v interface{}) error {
+	var apiResult *http.Response
 	var err error
-	if mediaType == "movies" {
-		resDetails, err = http.Get("https://api.themoviedb.org/3/movie/" + url.QueryEscape(mediaID) +
-			"?api_key=" + url.QueryEscape(t.apiKey) + "&language=pt_BR")
-		if err != nil {
-			return nil, nil, err
-		}
-		defer resDetails.Body.Close()
+	if apiResult, err = http.Get(url); err != nil {
+		return err
 	}
-	if mediaType == "tvshows" {
-		resDetails, err = http.Get("https://api.themoviedb.org/3/tv/" + url.QueryEscape(mediaID) +
-			"?api_key=" + url.QueryEscape(t.apiKey) + "&language=pt-BR")
-		if err != nil {
-			return nil, nil, err
-		}
-		defer resDetails.Body.Close()
-	}
-	details, err := ioutil.ReadAll(resDetails.Body)
+	defer apiResult.Body.Close()
+	searchResult, err := ioutil.ReadAll(apiResult.Body)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
-	if mediaType == "movies" {
-		var movDetails types.MovieDetails
-		err = json.Unmarshal(details, &movDetails)
-		if err != nil {
-			return nil, nil, err
-		}
-		return &movDetails, nil, err
+
+	err = json.Unmarshal(searchResult, &v)
+	if err != nil {
+		return err
 	}
-	if mediaType == "tvshows" {
-		var tvShowDetails types.TVShowDetails
-		err = json.Unmarshal(details, &tvShowDetails)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, &tvShowDetails, err
-	}
-	return nil, nil, nil
+	return nil
 }
 
 func (t *theMovieDBAPI) GetMovieCredits(movieID string) (*types.MovieCredits, error) {
@@ -236,57 +227,49 @@ type movieAPICached struct {
 	redis *redis.Client
 }
 
-func (t *movieAPICached) SearchMedia(mediaType string, mediaTitle string) ([]types.Movie, []types.TVShow, error) {
+func (t *movieAPICached) SearchMedia(mediaType string, mediaTitle string) (interface{}, error) {
 	log.Println("moviedb api cached")
 	var err error
 	t.redis, err = common.SetRedis()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	t.cache, err = common.SearchItens(t.redis, mediaType, mediaTitle)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	var resJSON []byte
 	if mediaType == "movies" {
 		if t.cache != nil {
-			return t.cache.([]types.Movie), nil, nil
+			return t.cache.([]types.Movie), nil
 		}
-		resMovies, _, err := t.api.SearchMedia(mediaType, mediaTitle)
-		if err != nil {
-			return nil, nil, err
-		}
-		resJSON, err = json.Marshal(resMovies)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = common.SetRedisKey(resJSON, t.redis, mediaType, mediaTitle)
-		if err != nil {
-			return nil, nil, err
-		}
-		t.cache = resMovies
-		return resMovies, nil, nil
 	}
 	if mediaType == "tvshows" {
 		if t.cache != nil {
-			return nil, t.cache.([]types.TVShow), nil
+			return t.cache.([]types.TVShow), nil
 		}
-		_, resTVShow, err := t.api.SearchMedia(mediaType, mediaTitle)
-		if err != nil {
-			return nil, nil, err
-		}
-		resJSON, err = json.Marshal(resTVShow)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = common.SetRedisKey(resJSON, t.redis, mediaType, mediaTitle)
-		if err != nil {
-			return nil, nil, err
-		}
-		t.cache = resTVShow
-		return nil, resTVShow, nil
 	}
-	return nil, nil, nil
+	var res interface{}
+	if res, err = t.setMediaInRedis(mediaType, mediaTitle); err != nil {
+		return nil, err
+	}
+	t.cache = res
+	return res, nil
+}
+
+func (t *movieAPICached) setMediaInRedis(mediaType string, mediaTitle string) (interface{}, error) {
+	res, err := t.api.SearchMedia(mediaType, mediaTitle)
+	if err != nil {
+		return nil, err
+	}
+	resJSON, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	key := "telegram:" + mediaType + ":" + mediaTitle
+	if err = t.redis.Set(key, resJSON, 72*time.Hour).Err(); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 type providersCached struct {
@@ -360,52 +343,23 @@ type detailsCached struct {
 func (t *detailsCached) GetDetails(
 	mediaType string,
 	mediaID string,
-) (*types.MovieDetails, *types.TVShowDetails, error) {
+) (interface{}, error) {
 	log.Println("details cached")
 	err := t.searchDetailsKeys(mediaType, mediaID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	var resJSON []byte
 	if mediaType == "movies" {
 		if t.cache != nil {
-			return t.cache.(*types.MovieDetails), nil, nil
+			return t.cache.(*types.MovieDetails), nil
 		}
-		resMovies, _, err := t.api.GetDetails(mediaType, mediaID)
-		if err != nil {
-			return nil, nil, err
-		}
-		resJSON, err = json.Marshal(resMovies)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = common.SetRedisKeyDetails(resJSON, t.redis, mediaType, mediaID)
-		if err != nil {
-			return nil, nil, err
-		}
-		t.cache = resMovies
-		return resMovies, nil, nil
 	}
 	if mediaType == "tvshows" {
 		if t.cache != nil {
-			return nil, t.cache.(*types.TVShowDetails), nil
+			return t.cache.(*types.TVShowDetails), nil
 		}
-		_, resTVShow, err := t.api.GetDetails(mediaType, mediaID)
-		if err != nil {
-			return nil, nil, err
-		}
-		resJSON, err = json.Marshal(resTVShow)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = common.SetRedisKeyDetails(resJSON, t.redis, mediaType, mediaID)
-		if err != nil {
-			return nil, nil, err
-		}
-		t.cache = resTVShow
-		return nil, resTVShow, nil
 	}
-	return nil, nil, nil
+	return nil, nil
 }
 
 func (t *detailsCached) searchDetailsKeys(mediaType string, mediaID string) error {
@@ -463,16 +417,16 @@ func (t *moviesCreditCached) GetMovieCredits(movieID string) (*types.MovieCredit
 	if err != nil {
 		return nil, err
 	}
-	t.cache = res
 	var resJSON []byte
 	resJSON, err = json.Marshal(res)
 	if err != nil {
 		return nil, err
 	}
-	key := "telegram:movies:credits:" + movieID
-	if err = t.redis.Set(key, resJSON, 72*time.Hour).Err(); err != nil {
+	err = common.SetRedisKeyMovieCredits(resJSON, t.redis, movieID)
+	if err != nil {
 		return nil, err
 	}
+	t.cache = res
 	return res, nil
 }
 

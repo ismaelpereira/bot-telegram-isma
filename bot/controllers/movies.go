@@ -177,16 +177,18 @@ func callMovieFunctions(
 ) ([]types.Movie, error) {
 	var arrayPos int
 	var err error
+	var res interface{}
 	apiKey := cfg.MovieAcessKey.Key
 	if update.CallbackQuery == nil {
 		searchClient, err := clients.NewSearchMedia(mediaType, mediaTitle, apiKey)
 		if err != nil {
 			return nil, err
 		}
-		movies, _, err = searchClient.SearchMedia(mediaType, mediaTitle)
+		res, err = searchClient.SearchMedia(mediaType, mediaTitle)
 		if err != nil {
 			return nil, err
 		}
+		movies = res.([]types.Movie)
 		if len(movies) == 0 {
 			err = fmt.Errorf("No film results: %w", err)
 			return nil, err
@@ -198,10 +200,11 @@ func callMovieFunctions(
 	if err != nil {
 		return nil, err
 	}
-	details, _, err := detailsClient.GetDetails(mediaType, strconv.Itoa(movies[arrayPos].ID))
+	res, err = detailsClient.GetDetails(mediaType, strconv.Itoa(movies[arrayPos].ID))
 	if err != nil {
 		return nil, err
 	}
+	details := res.(*types.MovieDetails)
 	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(movies[arrayPos].ID), apiKey)
 	if err != nil {
 		return nil, err

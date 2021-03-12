@@ -26,7 +26,7 @@ type jikanAPI struct {
 }
 
 type JikanAPI interface {
-	SearchAnimeOrManga(string, string) ([]types.Manga, []types.Anime, error)
+	SearchAnimeOrManga(string, string) (interface{}, error)
 }
 
 func NewJikanAPI(mediaTitle string, mediaType string) (JikanAPI, error) {
@@ -55,53 +55,49 @@ func NewMangaAPI(mangaID string, mangaName string) (MangaDetails, error) {
 	}, nil
 }
 
-func (t *jikanAPI) SearchAnimeOrManga(mediaTitle string, mediaType string) ([]types.Manga, []types.Anime, error) {
+func (t *jikanAPI) SearchAnimeOrManga(mediaTitle string, mediaType string) (interface{}, error) {
 	log.Println("jikan api")
-	var apiResult *http.Response
-	var err error
 	if mediaType == "animes" {
-		if apiResult, err = http.Get("https://api.jikan.moe/v3/search/anime?q=" +
-			url.QueryEscape(mediaTitle) + "&page=1"); err != nil {
-			return nil, nil, err
-		}
-		defer apiResult.Body.Close()
-		searchResult, err := ioutil.ReadAll(apiResult.Body)
-		if err != nil {
-			return nil, nil, err
-		}
-		var jikanResults types.JikanResponse
-		err = json.Unmarshal(searchResult, &jikanResults)
-		if err != nil {
-			return nil, nil, err
-		}
 		var animes []types.Anime
-		if err = json.Unmarshal(jikanResults.Data, &animes); err != nil {
-			return nil, nil, err
+		url := "https://api.jikan.moe/v3/search/anime?q=" +
+			url.QueryEscape(mediaTitle) + "&page=1"
+		if err := t.httpGET(url, &animes); err != nil {
+			return nil, err
 		}
-		return nil, animes, nil
+		return animes, nil
 	}
 	if mediaType == "mangas" {
-		if apiResult, err = http.Get("https://api.jikan.moe/v3/search/manga?q=" +
-			url.QueryEscape(mediaTitle) + "&page=1"); err != nil {
-			return nil, nil, err
-		}
-		defer apiResult.Body.Close()
-		searchResult, err := ioutil.ReadAll(apiResult.Body)
-		if err != nil {
-			return nil, nil, err
-		}
-		var jikanResults types.JikanResponse
-		err = json.Unmarshal(searchResult, &jikanResults)
-		if err != nil {
-			return nil, nil, err
-		}
 		var mangas []types.Manga
-		if err = json.Unmarshal(jikanResults.Data, &mangas); err != nil {
-			return nil, nil, err
+		url := "https://api.jikan.moe/v3/search/manga?q=" +
+			url.QueryEscape(mediaTitle) + "&page=1"
+		if err := t.httpGET(url, &mangas); err != nil {
+			return nil, err
 		}
-		return mangas, nil, nil
+		return mangas, nil
 	}
-	return nil, nil, nil
+	return nil, nil
+}
+
+func (t *jikanAPI) httpGET(url string, v interface{}) error {
+	var apiResult *http.Response
+	var err error
+	if apiResult, err = http.Get(url); err != nil {
+		return err
+	}
+	defer apiResult.Body.Close()
+	searchResult, err := ioutil.ReadAll(apiResult.Body)
+	if err != nil {
+		return err
+	}
+	var jikanResults types.JikanResponse
+	err = json.Unmarshal(searchResult, &jikanResults)
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(jikanResults.Data, &v); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (t *mediaDetails) GetMangaPageDetails(mangaID string, mangaName string) ([]byte, []byte, error) {
@@ -200,56 +196,48 @@ type jikanAPICached struct {
 	redis *redis.Client
 }
 
-func (t *jikanAPICached) SearchAnimeOrManga(mediaTitle string, mediaType string) ([]types.Manga, []types.Anime, error) {
+func (t *jikanAPICached) SearchAnimeOrManga(mediaTitle string, mediaType string) (interface{}, error) {
 	log.Println("jikan api cached")
 	var err error
 	t.redis, err = common.SetRedis()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	cache, err := common.SearchItens(t.redis, mediaType, mediaTitle)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	t.cache = cache
-	var resJSON []byte
 	if mediaType == "animes" {
 		if t.cache != nil {
-			return nil, t.cache.([]types.Anime), nil
+			return t.cache.([]types.Anime), nil
 		}
-		_, resAnime, err := t.api.SearchAnimeOrManga(mediaTitle, mediaType)
-		if err != nil {
-			return nil, nil, err
-		}
-		resJSON, err = json.Marshal(resAnime)
-		if err != nil {
-			return nil, nil, err
-		}
-		key := "telegram:" + mediaType + ":" + mediaTitle
-		if err = t.redis.Set(key, resJSON, 72*time.Hour).Err(); err != nil {
-			return nil, nil, err
-		}
-		t.cache = resAnime
-		return nil, resAnime, nil
 	}
 	if mediaType == "mangas" {
 		if t.cache != nil {
-			return t.cache.([]types.Manga), nil, nil
+			return t.cache.([]types.Manga), nil
 		}
-		resManga, _, err := t.api.SearchAnimeOrManga(mediaTitle, mediaType)
-		if err != nil {
-			return nil, nil, err
-		}
-		resJSON, err = json.Marshal(resManga)
-		if err != nil {
-			return nil, nil, err
-		}
-		key := "telegram:" + mediaType + ":" + mediaTitle
-		if err = t.redis.Set(key, resJSON, 72*time.Hour).Err(); err != nil {
-			return nil, nil, err
-		}
-		t.cache = resManga
-		return resManga, nil, nil
 	}
-	return nil, nil, nil
+	var res interface{}
+	if res, err = t.setInRedis(mediaType, mediaTitle); err != nil {
+		return nil, err
+	}
+	t.cache = res
+	return res, nil
+}
+
+func (t *jikanAPICached) setInRedis(mediaType string, mediaTitle string) (interface{}, error) {
+	res, err := t.api.SearchAnimeOrManga(mediaType, mediaTitle)
+	if err != nil {
+		return nil, err
+	}
+	resJSON, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	key := "telegram:" + mediaType + ":" + mediaTitle
+	if err = t.redis.Set(key, resJSON, 72*time.Hour).Err(); err != nil {
+		return nil, err
+	}
+	return res, nil
 }

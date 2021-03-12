@@ -260,16 +260,18 @@ func callTVShowsfunc(
 ) ([]types.TVShow, error) {
 	var arrayPos int
 	var err error
+	var res interface{}
 	apiKey := cfg.MovieAcessKey.Key
 	if update.CallbackQuery == nil {
 		searchClient, err := clients.NewSearchMedia(mediaType, mediaTitle, apiKey)
 		if err != nil {
 			return nil, err
 		}
-		_, tvShows, err = searchClient.SearchMedia(mediaType, mediaTitle)
+		res, err = searchClient.SearchMedia(mediaType, mediaTitle)
 		if err != nil {
 			return nil, err
 		}
+		tvShows = res.([]types.TVShow)
 		if len(tvShows) == 0 {
 			err = fmt.Errorf("No TVShows results: %w", err)
 			return nil, err
@@ -281,10 +283,11 @@ func callTVShowsfunc(
 	if err != nil {
 		return nil, err
 	}
-	_, details, err := detailsClient.GetDetails(mediaType, strconv.Itoa(tvShows[arrayPos].ID))
+	res, err = detailsClient.GetDetails(mediaType, strconv.Itoa(tvShows[arrayPos].ID))
 	if err != nil {
 		return nil, err
 	}
+	details := res.(*types.TVShowDetails)
 	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(tvShows[arrayPos].ID), apiKey)
 	if err != nil {
 		return nil, err

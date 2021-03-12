@@ -35,10 +35,11 @@ func MangasHandleUpdate(
 	if err != nil {
 		return err
 	}
-	mangas, _, err = jikanAPI.SearchAnimeOrManga(mangaName, command)
+	res, err := jikanAPI.SearchAnimeOrManga(mangaName, command)
 	if err != nil {
 		return err
 	}
+	mangas = res.([]types.Manga)
 	if len(mangas) == 0 {
 		return nil
 	}

@@ -1,11 +1,6 @@
 package controllers
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -48,14 +43,7 @@ func AnimesHandleUpdate(
 		return nil
 	}
 	animeMessage := getAnimesPictureAndSendMessage(update, animes[0])
-	var kb []tgbotapi.InlineKeyboardMarkup
-	if len(animes) > 1 {
-		kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "animes:1"),
-			),
-		))
-	}
+	kb := SendAnimesKeyboard(animes)
 	if len(animes) > 1 {
 		animeMessage.ReplyMarkup = kb[0]
 	}
@@ -101,44 +89,16 @@ func animesArrowButtonAction(
 		return err
 	}
 	animeMessage := getAnimesPictureAndSendMessage(update, animes[i])
-	var kb []tgbotapi.InlineKeyboardButton
-	if i != 0 {
-		kb = append(kb,
-			tgbotapi.NewInlineKeyboardButtonData(msgs.IconPrevious, "animes:"+strconv.Itoa(i-1)),
-		)
-	}
-	if i != (len(animes) - 1) {
-		kb = append(kb,
-			tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "animes:"+strconv.Itoa(i+1)),
-		)
-	}
-	var msgEdit types.EditMediaJSON
-	msgEdit.ChatID = update.CallbackQuery.Message.Chat.ID
-	msgEdit.MessageID = update.CallbackQuery.Message.MessageID
-	msgEdit.Media.Type = "photo"
-	if animes[i].CoverPicture == "" {
-		msgEdit.Media.URL = "https://badybassitt.sp.gov.br/lib/img/no-image.jpg"
-	} else {
-		msgEdit.Media.URL = animes[i].CoverPicture
-	}
-	msgEdit.Media.Caption = animeMessage.Caption
-	msgEdit.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-		kb,
+	kb := SendAnimesCallbackKeyboard(animes, i)
+	err = msgs.EditMessage(
+		cfg,
+		update.CallbackQuery.Message.Chat.ID,
+		update.CallbackQuery.Message.MessageID,
+		animes[i].CoverPicture,
+		animeMessage.Caption,
+		tgbotapi.NewInlineKeyboardMarkup(
+			kb,
+		),
 	)
-	messageJSON, err := json.Marshal(msgEdit)
-	if err != nil {
-		return err
-	}
-	sendMessage, err := http.Post("https://api.telegram.org/bot"+cfg.Telegram.Key+"/editMessageMedia",
-		"application/json", bytes.NewBuffer(messageJSON))
-	if err != nil {
-		return err
-	}
-	defer sendMessage.Body.Close()
-	if sendMessage.StatusCode > 299 || sendMessage.StatusCode < 200 {
-		err = fmt.Errorf("Error in post method %w", err)
-		log.Println(err)
-		return err
-	}
-	return nil
+	return err
 }

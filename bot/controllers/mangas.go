@@ -1,11 +1,6 @@
 package controllers
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -51,14 +46,7 @@ func MangasHandleUpdate(
 	if err != nil {
 		return err
 	}
-	var kb []tgbotapi.InlineKeyboardMarkup
-	if len(mangas) > 1 {
-		kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "mangas:1"),
-			),
-		))
-	}
+	kb := SendMangasKeyboard(mangas)
 	if len(mangas) > 1 {
 		mangaMessage.ReplyMarkup = kb[0]
 	}
@@ -118,44 +106,16 @@ func mangasArrowButtonAction(
 	if err != nil {
 		return err
 	}
-	var kb []tgbotapi.InlineKeyboardButton
-	if i != 0 {
-		kb = append(kb,
-			tgbotapi.NewInlineKeyboardButtonData(msgs.IconPrevious, "mangas:"+strconv.Itoa(i-1)),
-		)
-	}
-	if i != (len(animes) - 1) {
-		kb = append(kb,
-			tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "mangas:"+strconv.Itoa(i+1)),
-		)
-	}
-	var msgEdit types.EditMediaJSON
-	msgEdit.ChatID = update.CallbackQuery.Message.Chat.ID
-	msgEdit.MessageID = update.CallbackQuery.Message.MessageID
-	msgEdit.Media.Type = "photo"
-	if mangas[i].CoverPicture == "" {
-		msgEdit.Media.URL = "https://badybassitt.sp.gov.br/lib/img/no-image.jpg"
-	} else {
-		msgEdit.Media.URL = mangas[i].CoverPicture
-	}
-	msgEdit.Media.Caption = mangaMessage.Caption
-	msgEdit.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-		kb,
+	kb := SendMangasCallbackKeyboard(mangas, i)
+	err = msgs.EditMessage(
+		cfg,
+		update.CallbackQuery.Message.Chat.ID,
+		update.CallbackQuery.Message.MessageID,
+		mangas[i].CoverPicture,
+		mangaMessage.Caption,
+		tgbotapi.NewInlineKeyboardMarkup(
+			kb,
+		),
 	)
-	messageJSON, err := json.Marshal(msgEdit)
-	if err != nil {
-		return err
-	}
-	sendMessage, err := http.Post("https://api.telegram.org/bot"+cfg.Telegram.Key+"/editMessageMedia",
-		"application/json", bytes.NewBuffer(messageJSON))
-	if err != nil {
-		return err
-	}
-	defer sendMessage.Body.Close()
-	if sendMessage.StatusCode > 299 || sendMessage.StatusCode < 200 {
-		err = fmt.Errorf("Error in post method %w", err)
-		log.Println(err)
-		return err
-	}
-	return nil
+	return err
 }

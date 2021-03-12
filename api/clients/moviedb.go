@@ -81,6 +81,7 @@ func (t *theMovieDBAPI) SearchMedia(
 	log.Println("moviedb api")
 	var movieAPI *http.Response
 	var err error
+	var theMovieResult types.MovieDBResponse
 	if mediaType == "movies" {
 		movieAPI, err = http.Get("https://api.themoviedb.org/3/search/movie?api_key=" + url.QueryEscape(t.apiKey) +
 			"&page=1&langague=pt-br&query=" + url.QueryEscape(mediaTitle))
@@ -88,25 +89,14 @@ func (t *theMovieDBAPI) SearchMedia(
 			return nil, nil, err
 		}
 		defer movieAPI.Body.Close()
-	}
-	if mediaType == "tvshows" {
-		movieAPI, err = http.Get("https://api.themoviedb.org/3/search/tv?api_key=" + url.QueryEscape(t.apiKey) +
-			"&language=pt-BR&page=1&query=" + url.QueryEscape(mediaTitle))
+		searchResults, err := ioutil.ReadAll(movieAPI.Body)
 		if err != nil {
 			return nil, nil, err
 		}
-		defer movieAPI.Body.Close()
-	}
-	searchResults, err := ioutil.ReadAll(movieAPI.Body)
-	if err != nil {
-		return nil, nil, err
-	}
-	var theMovieResult types.MovieDBResponse
-	err = json.Unmarshal(searchResults, &theMovieResult)
-	if err != nil {
-		return nil, nil, err
-	}
-	if mediaType == "movies" {
+		err = json.Unmarshal(searchResults, &theMovieResult)
+		if err != nil {
+			return nil, nil, err
+		}
 		var movies []types.Movie
 		err = json.Unmarshal(theMovieResult.Data, &movies)
 		if err != nil {
@@ -114,15 +104,27 @@ func (t *theMovieDBAPI) SearchMedia(
 		}
 		return movies, nil, nil
 	}
-	if mediaType == "tvshows" {
-		var tvshows []types.TVShow
-		err = json.Unmarshal(theMovieResult.Data, &tvshows)
-		if err != nil {
-			return nil, nil, err
-		}
-		return nil, tvshows, nil
+	movieAPI, err = http.Get("https://api.themoviedb.org/3/search/tv?api_key=" + url.QueryEscape(t.apiKey) +
+		"&language=pt-BR&page=1&query=" + url.QueryEscape(mediaTitle))
+	if err != nil {
+		return nil, nil, err
 	}
-	return nil, nil, nil
+	defer movieAPI.Body.Close()
+	searchResults, err := ioutil.ReadAll(movieAPI.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = json.Unmarshal(searchResults, &theMovieResult)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var tvshows []types.TVShow
+	err = json.Unmarshal(theMovieResult.Data, &tvshows)
+	if err != nil {
+		return nil, nil, err
+	}
+	return nil, tvshows, nil
 }
 
 func (t *theMovieDBAPI) SearchProviders(
@@ -241,11 +243,10 @@ func (t *movieAPICached) SearchMedia(mediaType string, mediaTitle string) ([]typ
 	if err != nil {
 		return nil, nil, err
 	}
-	cache, err := common.SearchItens(t.redis, mediaType, mediaTitle)
+	t.cache, err = common.SearchItens(t.redis, mediaType, mediaTitle)
 	if err != nil {
 		return nil, nil, err
 	}
-	t.cache = cache
 	var resJSON []byte
 	if mediaType == "movies" {
 		if t.cache != nil {
@@ -259,8 +260,8 @@ func (t *movieAPICached) SearchMedia(mediaType string, mediaTitle string) ([]typ
 		if err != nil {
 			return nil, nil, err
 		}
-		key := "telegram:" + mediaType + ":" + mediaTitle
-		if err = t.redis.Set(key, resJSON, 72*time.Hour).Err(); err != nil {
+		err = common.SetRedisKey(resJSON, t.redis, mediaType, mediaTitle)
+		if err != nil {
 			return nil, nil, err
 		}
 		t.cache = resMovies
@@ -278,8 +279,8 @@ func (t *movieAPICached) SearchMedia(mediaType string, mediaTitle string) ([]typ
 		if err != nil {
 			return nil, nil, err
 		}
-		key := "telegram:" + mediaType + ":" + mediaTitle
-		if err = t.redis.Set(key, resJSON, 72*time.Hour).Err(); err != nil {
+		err = common.SetRedisKey(resJSON, t.redis, mediaType, mediaTitle)
+		if err != nil {
 			return nil, nil, err
 		}
 		t.cache = resTVShow
@@ -378,8 +379,8 @@ func (t *detailsCached) GetDetails(
 		if err != nil {
 			return nil, nil, err
 		}
-		key := "telegram:" + mediaType + ":details:" + mediaID
-		if err = t.redis.Set(key, resJSON, 72*time.Hour).Err(); err != nil {
+		err = common.SetRedisKeyDetails(resJSON, t.redis, mediaType, mediaID)
+		if err != nil {
 			return nil, nil, err
 		}
 		t.cache = resMovies
@@ -397,8 +398,8 @@ func (t *detailsCached) GetDetails(
 		if err != nil {
 			return nil, nil, err
 		}
-		key := "telegram:" + mediaType + ":details:" + mediaID
-		if err = t.redis.Set(key, resJSON, 72*time.Hour).Err(); err != nil {
+		err = common.SetRedisKeyDetails(resJSON, t.redis, mediaType, mediaID)
+		if err != nil {
 			return nil, nil, err
 		}
 		t.cache = resTVShow
@@ -417,9 +418,6 @@ func (t *detailsCached) searchDetailsKeys(mediaType string, mediaID string) erro
 	if err != nil {
 		return err
 	}
-	if len(keys) == 0 {
-		return nil
-	}
 	for _, key := range keys {
 		if strings.TrimPrefix(key, "telegram:"+mediaType+":details:") != mediaID {
 			continue
@@ -431,21 +429,18 @@ func (t *detailsCached) searchDetailsKeys(mediaType string, mediaID string) erro
 			return err
 		}
 		if mediaType == "movies" {
-			err = json.Unmarshal(data, &movieDetails)
-			if err != nil {
+			if err = json.Unmarshal(data, &movieDetails); err != nil {
 				return err
 			}
 			t.cache = movieDetails
 		}
 		if mediaType == "tvshows" {
-			err = json.Unmarshal(data, &tvShowDetails)
-			if err != nil {
+			if err = json.Unmarshal(data, &tvShowDetails); err != nil {
 				return err
 			}
 			t.cache = tvShowDetails
 		}
 	}
-
 	return nil
 }
 

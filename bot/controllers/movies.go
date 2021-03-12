@@ -1,11 +1,7 @@
 package controllers
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -46,14 +42,7 @@ func MoviesHandleUpdate(
 	if err != nil {
 		return err
 	}
-	var kb []tgbotapi.InlineKeyboardMarkup
-	if len(movies) > 1 {
-		kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movies:1"),
-			),
-		))
-	}
+	kb := SendMoviesKeyboard(movies)
 	if len(movies) > 1 {
 		movieMessage.ReplyMarkup = kb[0]
 	}
@@ -79,45 +68,18 @@ func movieArrowButtonsAction(
 	if err != nil {
 		return err
 	}
-	var kb []tgbotapi.InlineKeyboardButton
-	if i != 0 {
-		kb = append(kb,
-			tgbotapi.NewInlineKeyboardButtonData(msgs.IconPrevious, "movies:"+strconv.Itoa(i-1)),
-		)
-	}
-	if i != (len(movies) - 1) {
-		kb = append(kb,
-			tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "movies:"+strconv.Itoa(i+1)),
-		)
-	}
-	var msgEdit types.EditMediaJSON
-	msgEdit.ChatID = update.CallbackQuery.Message.Chat.ID
-	msgEdit.MessageID = update.CallbackQuery.Message.MessageID
-	msgEdit.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-		kb,
+	kb := SendMoviesCallbackKeyboard(movies, i)
+	err = msgs.EditMessage(
+		cfg,
+		update.CallbackQuery.Message.Chat.ID,
+		update.CallbackQuery.Message.MessageID,
+		"https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+movies[i].PosterPath,
+		movieMessage.Caption,
+		tgbotapi.NewInlineKeyboardMarkup(
+			kb,
+		),
 	)
-	msgEdit.Media.Caption = movieMessage.Caption
-	msgEdit.Media.Type = "photo"
-	if movies[i].PosterPath == "" {
-		msgEdit.Media.URL = "https://badybassitt.sp.gov.br/lib/img/no-image.jpg"
-	} else {
-		msgEdit.Media.URL = "https://www.themoviedb.org/t/p/w300_and_h450_bestv2" + movies[i].PosterPath
-	}
-	messageJSON, err := json.Marshal(msgEdit)
-	if err != nil {
-		return err
-	}
-	sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(cfg.Telegram.Key)+"/editMessageMedia",
-		"application/json", bytes.NewBuffer(messageJSON))
-	if err != nil {
-		return err
-	}
-	defer sendMessage.Body.Close()
-	if sendMessage.StatusCode > 299 || sendMessage.StatusCode < 200 {
-		err = fmt.Errorf("Error in post method %w", err)
-		return err
-	}
-	return nil
+	return err
 }
 
 func getMoviesPictureAndSendMessage(

@@ -74,7 +74,7 @@ func (t *moneyAPICached) GetCurrencies() (*types.MoneySearchResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = t.redis.Set(key, resJSON, 1*time.Minute).Err(); err != nil {
+	if err = t.redis.Set(key, resJSON, 1*time.Hour).Err(); err != nil {
 		return nil, err
 	}
 	return res, nil

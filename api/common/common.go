@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/go-redis/redis/v7"
 	"github.com/ismaelpereira/telegram-bot-isma/config"
@@ -27,46 +28,56 @@ func SearchItens(redis *redis.Client, mediaType string, mediaTitle string) (inte
 		if err != nil {
 			return nil, err
 		}
-		switch mediaType {
-		case "animes":
-			{
-				var animeMedia []types.Anime
-				err = json.Unmarshal(data, &animeMedia)
-				if err != nil {
-					return nil, err
-				}
-				cache = animeMedia
-			}
-		case "mangas":
-			{
-				var mangaMedia []types.Manga
-				err = json.Unmarshal(data, &mangaMedia)
-				if err != nil {
-					return nil, err
-				}
-				cache = mangaMedia
-			}
-		case "movies":
-			{
-				var movieMedia []types.Movie
-				err = json.Unmarshal(data, &movieMedia)
-				if err != nil {
-					return nil, err
-				}
-				cache = movieMedia
-			}
-		case "tvshows":
-			{
-				var tvShowMedia []types.TVShow
-				err = json.Unmarshal(data, &tvShowMedia)
-				if err != nil {
-					return nil, err
-				}
-				cache = tvShowMedia
+		handler := map[string]types.RedisHandler{
+			"animes":  cmdAnimes,
+			"mangas":  cmdMangas,
+			"movies":  cmdMovies,
+			"tvshows": cmdTVShows,
+		}
+		if f, ok := handler[mediaType]; ok {
+			cache, err = f(data)
+			if err != nil {
+				return nil, err
 			}
 		}
 	}
 	return cache, nil
+}
+
+func cmdAnimes(data []byte) (interface{}, error) {
+	var animeMedia []types.Anime
+	err := json.Unmarshal(data, &animeMedia)
+	if err != nil {
+		return nil, err
+	}
+	return animeMedia, nil
+}
+
+func cmdMangas(data []byte) (interface{}, error) {
+	var mangaMedia []types.Manga
+	err := json.Unmarshal(data, &mangaMedia)
+	if err != nil {
+		return nil, err
+	}
+	return mangaMedia, nil
+}
+
+func cmdMovies(data []byte) (interface{}, error) {
+	var movieMedia []types.Movie
+	err := json.Unmarshal(data, &movieMedia)
+	if err != nil {
+		return nil, err
+	}
+	return movieMedia, nil
+}
+
+func cmdTVShows(data []byte) (interface{}, error) {
+	var tvShowMedia []types.TVShow
+	err := json.Unmarshal(data, &tvShowMedia)
+	if err != nil {
+		return nil, err
+	}
+	return tvShowMedia, nil
 }
 
 func SetRedis() (*redis.Client, error) {
@@ -79,4 +90,16 @@ func SetRedis() (*redis.Client, error) {
 		return nil, err
 	}
 	return redis, nil
+}
+
+func SetRedisKey(resJSON []byte, redis *redis.Client, mediaType string, mediaTitle string) error {
+	key := "telegram:" + mediaType + ":" + mediaTitle
+	err := redis.Set(key, resJSON, 72*time.Hour).Err()
+	return err
+}
+
+func SetRedisKeyDetails(resJSON []byte, redis *redis.Client, mediaType string, mediaID string) error {
+	key := "telegram:" + mediaType + ":details:" + mediaID
+	err := redis.Set(key, resJSON, 72*time.Hour).Err()
+	return err
 }

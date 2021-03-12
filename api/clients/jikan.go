@@ -65,24 +65,15 @@ func (t *jikanAPI) SearchAnimeOrManga(mediaTitle string, mediaType string) ([]ty
 			return nil, nil, err
 		}
 		defer apiResult.Body.Close()
-	}
-	if mediaType == "mangas" {
-		if apiResult, err = http.Get("https://api.jikan.moe/v3/search/manga?q=" +
-			url.QueryEscape(mediaTitle) + "&page=1"); err != nil {
+		searchResult, err := ioutil.ReadAll(apiResult.Body)
+		if err != nil {
 			return nil, nil, err
 		}
-		defer apiResult.Body.Close()
-	}
-	searchResult, err := ioutil.ReadAll(apiResult.Body)
-	if err != nil {
-		return nil, nil, err
-	}
-	var jikanResults types.JikanResponse
-	err = json.Unmarshal(searchResult, &jikanResults)
-	if err != nil {
-		return nil, nil, err
-	}
-	if mediaType == "animes" {
+		var jikanResults types.JikanResponse
+		err = json.Unmarshal(searchResult, &jikanResults)
+		if err != nil {
+			return nil, nil, err
+		}
 		var animes []types.Anime
 		if err = json.Unmarshal(jikanResults.Data, &animes); err != nil {
 			return nil, nil, err
@@ -90,6 +81,20 @@ func (t *jikanAPI) SearchAnimeOrManga(mediaTitle string, mediaType string) ([]ty
 		return nil, animes, nil
 	}
 	if mediaType == "mangas" {
+		if apiResult, err = http.Get("https://api.jikan.moe/v3/search/manga?q=" +
+			url.QueryEscape(mediaTitle) + "&page=1"); err != nil {
+			return nil, nil, err
+		}
+		defer apiResult.Body.Close()
+		searchResult, err := ioutil.ReadAll(apiResult.Body)
+		if err != nil {
+			return nil, nil, err
+		}
+		var jikanResults types.JikanResponse
+		err = json.Unmarshal(searchResult, &jikanResults)
+		if err != nil {
+			return nil, nil, err
+		}
 		var mangas []types.Manga
 		if err = json.Unmarshal(jikanResults.Data, &mangas); err != nil {
 			return nil, nil, err

@@ -1,11 +1,7 @@
 package controllers
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -49,17 +45,7 @@ func TVShowHandleUpdate(
 	if err != nil {
 		return err
 	}
-	var kb []tgbotapi.InlineKeyboardMarkup
-	if len(tvShows) > 1 {
-		kb = append(kb, tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "tvshows:1"),
-			),
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("Detalhes", "tvshows:seasons:0"),
-			),
-		))
-	}
+	kb := SendTVShowsKeyboard(tvShows)
 	if len(tvShows) > 1 {
 		tvShowMessage.ReplyMarkup = kb[0]
 	}
@@ -74,7 +60,11 @@ func TVShowHandleUpdate(
 	return err
 }
 
-func hasCallback(cfg *config.Config, update *tgbotapi.Update, tvShows []types.TVShow) error {
+func hasCallback(
+	cfg *config.Config,
+	update *tgbotapi.Update,
+	tvShows []types.TVShow,
+) error {
 	if !strings.Contains(update.CallbackQuery.Data, ":") {
 		i, err := strconv.Atoi(update.CallbackQuery.Data)
 		if err != nil {
@@ -102,37 +92,18 @@ func hasCallback(cfg *config.Config, update *tgbotapi.Update, tvShows []types.TV
 		"\nNúmero de Episódios: ", strconv.Itoa(tvShows[arrayPos].TVShowDetails.Seasons[season].EpisodesCount),
 		"\nData de Lançamento: ", releaseDate.Format("02/01/2006"),
 	)
-	var msgEdit types.EditMediaJSON
-	msgEdit.ChatID = update.CallbackQuery.Message.Chat.ID
-	msgEdit.MessageID = update.CallbackQuery.Message.MessageID
-	msgEdit.Media.Type = "photo"
-	if tvShows[arrayPos].TVShowDetails.Seasons[season].PosterPath == "" {
-		msgEdit.Media.URL = "https://badybassitt.sp.gov.br/lib/img/no-image.jpg"
-	} else {
-		msgEdit.Media.URL = "https://www.themoviedb.org/t/p/w300_and_h450_bestv2/" +
-			tvShows[arrayPos].TVShowDetails.Seasons[season].PosterPath
-	}
-	msgEdit.Media.Caption = strings.Join(seasonDetails, "")
-	msgEdit.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+	kb := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Voltar", "tvshows:seasons:"+strconv.Itoa(arrayPos)),
 		),
 	)
-	messageJSON, err := json.Marshal(msgEdit)
-	if err != nil {
-		return err
-	}
-	sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(cfg.Telegram.Key)+"/editmessagemedia",
-		"application/json", bytes.NewBuffer(messageJSON))
-	if err != nil {
-		return err
-	}
-	defer sendMessage.Body.Close()
-	if sendMessage.StatusCode < 200 || sendMessage.StatusCode > 299 {
-		err = fmt.Errorf("Error in post method %w", err)
-		return err
-	}
-	return nil
+	err = msgs.EditMessage(cfg,
+		update.CallbackQuery.Message.Chat.ID,
+		update.CallbackQuery.Message.MessageID,
+		"https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+tvShows[arrayPos].TVShowDetails.Seasons[season].PosterPath,
+		strings.Join(seasonDetails, ""),
+		kb)
+	return err
 }
 
 func tvShowArrowButtonsAction(
@@ -153,52 +124,27 @@ func tvShowArrowButtonsAction(
 	if err != nil {
 		return err
 	}
-	var kb []tgbotapi.InlineKeyboardButton
-	if i != 0 {
-		kb = append(kb,
-			tgbotapi.NewInlineKeyboardButtonData(msgs.IconPrevious, "tvshows:"+strconv.Itoa(i-1)),
-		)
-	}
-	if i != (len(tvShows) - 1) {
-		kb = append(kb,
-			tgbotapi.NewInlineKeyboardButtonData(msgs.IconNext, "tvshows:"+strconv.Itoa(i+1)),
-		)
-	}
-	var msgEdit types.EditMediaJSON
-	msgEdit.ChatID = update.CallbackQuery.Message.Chat.ID
-	msgEdit.MessageID = update.CallbackQuery.Message.MessageID
-	msgEdit.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+	kb := SendTVShowsCallbackKeyboard(tvShows, i)
+
+	kbDetails := tgbotapi.NewInlineKeyboardMarkup(
 		kb,
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Detalhes", "tvshows:seasons:"+strconv.Itoa(i)),
 		),
 	)
-	msgEdit.Media.Caption = tvShowMessage.Caption
-	msgEdit.Media.Type = "photo"
-	if tvShows[i].PosterPath == "" {
-		msgEdit.Media.URL = "https://badybassitt.sp.gov.br/lib/img/no-image.jpg"
-	} else {
-		msgEdit.Media.URL = "https://www.themoviedb.org/t/p/w300_and_h450_bestv2" + tvShows[i].PosterPath
-	}
-	messageJSON, err := json.Marshal(msgEdit)
-	if err != nil {
-		return err
-	}
-	sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(cfg.Telegram.Key)+"/editmessagemedia",
-		"application/json", bytes.NewBuffer(messageJSON))
-	if err != nil {
-		return err
-	}
-	defer sendMessage.Body.Close()
-	if sendMessage.StatusCode > 299 || sendMessage.StatusCode < 200 {
-		err = fmt.Errorf("Error in post method %w", err)
-		return err
-	}
-
-	return nil
+	err = msgs.EditMessage(
+		cfg,
+		update.CallbackQuery.Message.Chat.ID,
+		update.CallbackQuery.Message.MessageID,
+		"https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+tvShows[i].PosterPath,
+		tvShowMessage.Caption,
+		kbDetails,
+	)
+	return err
 }
 
-func sendSeasonKeyboard(cfg *config.Config,
+func sendSeasonKeyboard(
+	cfg *config.Config,
 	update *tgbotapi.Update,
 	tvShow types.TVShow,
 ) error {
@@ -217,31 +163,15 @@ func sendSeasonKeyboard(cfg *config.Config,
 	))
 	var kbComplete tgbotapi.InlineKeyboardMarkup
 	kbComplete.InlineKeyboard = kb
-	var msgEdit types.EditMediaJSON
-	msgEdit.ChatID = update.CallbackQuery.Message.Chat.ID
-	msgEdit.MessageID = update.CallbackQuery.Message.MessageID
-	msgEdit.ReplyMarkup = kbComplete
-	msgEdit.Media.Type = "photo"
-	if tvShow.PosterPath == "" {
-		msgEdit.Media.URL = "https://badybassitt.sp.gov.br/lib/img/no-image.jpg"
-	} else {
-		msgEdit.Media.URL = "https://www.themoviedb.org/t/p/w300_and_h450_bestv2" + tvShow.PosterPath
-	}
-	messageJSON, err := json.Marshal(msgEdit)
-	if err != nil {
-		return err
-	}
-	sendMessage, err := http.Post("https://api.telegram.org/bot"+url.QueryEscape(cfg.Telegram.Key)+"/editMessageMedia",
-		"application/json", bytes.NewBuffer(messageJSON))
-	if err != nil {
-		return err
-	}
-	defer sendMessage.Body.Close()
-	if sendMessage.StatusCode > 299 || sendMessage.StatusCode < 200 {
-		err = fmt.Errorf("Error in post method %w", err)
-		return err
-	}
-	return nil
+	err = msgs.EditMessage(
+		cfg,
+		update.CallbackQuery.Message.Chat.ID,
+		update.CallbackQuery.Message.MessageID,
+		"https://www.themoviedb.org/t/p/w300_and_h450_bestv2"+tvShow.PosterPath,
+		"",
+		kbComplete,
+	)
+	return err
 }
 
 func getTVShowPictureAndSendMessage(
@@ -341,7 +271,7 @@ func callTVShowsfunc(
 			return nil, err
 		}
 		if len(tvShows) == 0 {
-			err = fmt.Errorf("No film results: %w", err)
+			err = fmt.Errorf("No TVShows results: %w", err)
 			return nil, err
 		}
 	} else if arrayPos, err = strconv.Atoi(update.CallbackQuery.Data); err != nil {

@@ -108,27 +108,11 @@ func reminderHandler(
 	measureOfTime := strings.TrimSpace(commandSplited[1])
 	message := commandSplited[2]
 	var expireTime time.Time
-	if measureOfTime == "seconds" {
-		duration, err := time.ParseDuration(value + "s")
-		if err != nil {
-			return err
-		}
-		expireTime = time.Now().Add(duration)
+	duration, err := time.ParseDuration(value + string(measureOfTime[0]))
+	if err != nil {
+		return err
 	}
-	if measureOfTime == "minutes" {
-		duration, err := time.ParseDuration(value + "m")
-		if err != nil {
-			return err
-		}
-		expireTime = time.Now().Add(duration)
-	}
-	if measureOfTime == "hours" {
-		duration, err := time.ParseDuration(value + "h")
-		if err != nil {
-			return err
-		}
-		expireTime = time.Now().Add(duration)
-	}
+	expireTime = time.Now().Add(duration)
 	if err := redis.HMSet("telegram:reminder:"+
 		expireTime.Format("2006:01:02:15:04:05"), "chatID", update.Message.Chat.ID,
 		"text", message).Err(); err != nil {
@@ -156,18 +140,16 @@ func reminderWorker(bot *tgbotapi.BotAPI, redis *redis.Client) error {
 		if err != nil {
 			return err
 		}
-		if data != nil && data["chatID"] != "" && data["text"] != "" {
+		if data != nil && data["chatID"] != "" {
 			chatID, err := strconv.ParseInt(data["chatID"], 10, 64)
 			if err != nil {
 				return err
 			}
 			msg := tgbotapi.NewMessage(chatID, msgs.IconAlarmClock+data["text"])
-			_, err = bot.Send(msg)
-			if err != nil {
+			if _, err = bot.Send(msg); err != nil {
 				return err
 			}
-			err = redis.Del(key).Err()
-			if err != nil {
+			if err = redis.Del(key).Err(); err != nil {
 				return err
 			}
 		}

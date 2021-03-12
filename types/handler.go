@@ -12,3 +12,9 @@ type Handler func(
 	bot *tgbotapi.BotAPI,
 	update *tgbotapi.Update,
 ) error
+
+type RedisHandler func(
+	[]byte,
+) (interface{}, error)
+
+type MediaTypeHandler func() (interface{}, error)

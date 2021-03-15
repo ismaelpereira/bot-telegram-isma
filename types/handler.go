@@ -13,8 +13,8 @@ type Handler func(
 	update *tgbotapi.Update,
 ) error
 
-type RedisHandler func(
-	[]byte,
-) (interface{}, error)
+type RedisHandler func([]byte) (interface{}, error)
 
 type MediaTypeHandler func() (interface{}, error)
+
+type MediaHandler func(apiKey string, mediaType string, mediaID string) error

@@ -87,6 +87,7 @@ func (t *theMovieDBAPI) SearchMedia(
 		if err := t.httpGET(url, &movies); err != nil {
 			return nil, err
 		}
+		return movies, nil
 	}
 	if mediaType == "tvshows" {
 		var tvShows []types.TVShow
@@ -96,6 +97,7 @@ func (t *theMovieDBAPI) SearchMedia(
 		if err := t.httpGET(url, &tvShows); err != nil {
 			return nil, err
 		}
+		return tvShows, nil
 	}
 	return nil, nil
 }
@@ -164,20 +166,22 @@ func (t *theMovieDBAPI) GetDetails(
 ) (interface{}, error) {
 	log.Println("gettin details")
 	if mediaType == "movies" {
-		var details []types.MovieDetails
+		var details types.MovieDetails
 		url := "https://api.themoviedb.org/3/movie/" + url.QueryEscape(mediaID) +
 			"?api_key=" + url.QueryEscape(t.apiKey) + "&language=pt_BR"
 		if err := t.httpGETDetails(url, details); err != nil {
 			return nil, err
 		}
+		return details, nil
 	}
 	if mediaType == "tvshows" {
-		var details []types.TVShowDetails
+		var details types.TVShowDetails
 		url := "https://api.themoviedb.org/3/tv/" + url.QueryEscape(mediaID) +
 			"?api_key=" + url.QueryEscape(t.apiKey) + "&language=pt_BR"
 		if err := t.httpGETDetails(url, details); err != nil {
 			return nil, err
 		}
+		return details, nil
 	}
 	return nil, nil
 }
@@ -351,15 +355,19 @@ func (t *detailsCached) GetDetails(
 	}
 	if mediaType == "movies" {
 		if t.cache != nil {
-			return t.cache.(*types.MovieDetails), nil
+			return t.cache.(types.MovieDetails), nil
 		}
 	}
 	if mediaType == "tvshows" {
 		if t.cache != nil {
-			return t.cache.(*types.TVShowDetails), nil
+			return t.cache.(types.TVShowDetails), nil
 		}
 	}
-	return nil, nil
+	res, err := t.api.GetDetails(mediaType, mediaID)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func (t *detailsCached) searchDetailsKeys(mediaType string, mediaID string) error {
@@ -376,8 +384,8 @@ func (t *detailsCached) searchDetailsKeys(mediaType string, mediaID string) erro
 		if strings.TrimPrefix(key, "telegram:"+mediaType+":details:") != mediaID {
 			continue
 		}
-		var movieDetails *types.MovieDetails
-		var tvShowDetails *types.TVShowDetails
+		var movieDetails types.MovieDetails
+		var tvShowDetails types.TVShowDetails
 		data, err := t.redis.Get(key).Bytes()
 		if err != nil {
 			return err

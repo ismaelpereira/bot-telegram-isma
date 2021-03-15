@@ -204,7 +204,7 @@ func callMovieFunctions(
 	if err != nil {
 		return nil, err
 	}
-	details := res.(*types.MovieDetails)
+	details := res.(types.MovieDetails)
 	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(movies[arrayPos].ID), apiKey)
 	if err != nil {
 		return nil, err
@@ -221,7 +221,7 @@ func callMovieFunctions(
 	if err != nil {
 		return nil, err
 	}
-	movies[arrayPos].Details = *details
+	movies[arrayPos].Details = details
 	movies[arrayPos].Providers = *providers
 	movies[arrayPos].Credits = *credits
 	return movies, nil

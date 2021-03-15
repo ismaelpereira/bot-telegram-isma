@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-redis/redis/v7"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/ismaelpereira/telegram-bot-isma/api/clients"
@@ -83,27 +82,20 @@ func caseNew(bot *tgbotapi.BotAPI, update *tgbotapi.Update, args []string) error
 
 func caseAdd(bot *tgbotapi.BotAPI, update *tgbotapi.Update, args []string) error {
 	chatID := strconv.FormatInt(update.Message.Chat.ID, 10)
-	keywords := strings.Join(args[1:], " ")
-	itens := strings.Fields(keywords)
+	keywords := strings.Join(args[2:], " ")
+	itens := strings.Split(keywords, ",")
 	if len(itens) < 2 {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID,
 			"Você digitou o comando errado. Não foi possível completar a solicitação")
 		_, err := bot.Send(msg)
 		return err
 	}
-	checklistTitle := itens[0]
-	if strings.Contains(itens[1], " ") {
-		itens[1] = strings.ReplaceAll(itens[1], " ", "")
-	}
-	spew.Dump(itens)
-	values := strings.Split(strings.TrimSpace(itens[1]), ",")
-	spew.Dump(values)
-
+	checklistTitle := args[1]
 	var checklist types.Checklist
-	objects := make([]types.ChecklistItem, len(values), cap(values))
+	objects := make([]types.ChecklistItem, len(itens), cap(itens))
 	checklist.Title = checklistTitle
-	for i, itens := range values {
-		objects[i].Name = itens
+	for i, item := range itens {
+		objects[i].Name = item
 	}
 	checklist.Itens = objects
 	listJSON, err := json.Marshal(checklist)

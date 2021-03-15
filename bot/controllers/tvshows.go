@@ -287,7 +287,7 @@ func callTVShowsfunc(
 	if err != nil {
 		return nil, err
 	}
-	details := res.(*types.TVShowDetails)
+	details := res.(types.TVShowDetails)
 	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(tvShows[arrayPos].ID), apiKey)
 	if err != nil {
 		return nil, err
@@ -296,7 +296,7 @@ func callTVShowsfunc(
 	if err != nil {
 		return nil, err
 	}
-	tvShows[arrayPos].TVShowDetails = *details
+	tvShows[arrayPos].TVShowDetails = details
 	tvShows[arrayPos].Providers = *providers
 	return tvShows, nil
 }

@@ -24,18 +24,18 @@ func AnimesHandleUpdate(
 	if update.CallbackQuery != nil {
 		return animesArrowButtonAction(cfg, update, animes)
 	}
-	command := update.Message.Command()
+	mediaType := "animes"
 	animeName := strings.TrimSpace(update.Message.CommandArguments())
 	if animeName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAnimes)
 		_, err := bot.Send(msg)
 		return err
 	}
-	jikanAPI, err := clients.NewJikanAPI(animeName, command)
+	jikanAPI, err := clients.NewJikanAPI(animeName, mediaType)
 	if err != nil {
 		return err
 	}
-	res, err := jikanAPI.SearchAnimeOrManga(animeName, command)
+	res, err := jikanAPI.SearchAnimeOrManga(mediaType, animeName)
 	if err != nil {
 		return err
 	}

@@ -124,10 +124,10 @@ func reminderHandler(
 	return err
 }
 
-func reminderWorker(bot *tgbotapi.BotAPI, redis *redis.Client) error {
+func reminderWorker(bot *tgbotapi.BotAPI, redis *redis.Client) {
 	keys, err := redis.Keys("telegram:reminder:*").Result()
 	if err != nil {
-		return err
+		return
 	}
 	sort.Strings(keys)
 	now := "telegram:reminder:" + time.Now().Format("2006:01:02:15:04:05")
@@ -138,30 +138,26 @@ func reminderWorker(bot *tgbotapi.BotAPI, redis *redis.Client) error {
 		log.Printf("got reminder with key %q\n", key)
 		data, err := redis.HGetAll(key).Result()
 		if err != nil {
-			return err
+			return
 		}
 		if data != nil && data["chatID"] != "" {
 			chatID, err := strconv.ParseInt(data["chatID"], 10, 64)
 			if err != nil {
-				return err
+				return
 			}
 			msg := tgbotapi.NewMessage(chatID, msgs.IconAlarmClock+data["text"])
 			if _, err = bot.Send(msg); err != nil {
-				return err
+				return
 			}
 			if err = redis.Del(key).Err(); err != nil {
-				return err
+				return
 			}
 		}
 	}
-	return nil
 }
 
 func ReminderCheck(bot *tgbotapi.BotAPI, redis *redis.Client) {
 	for {
-		err := reminderWorker(bot, redis)
-		if err != nil {
-			panic(err)
-		}
+		reminderWorker(bot, redis)
 	}
 }

@@ -29,7 +29,7 @@ type JikanAPI interface {
 	SearchAnimeOrManga(string, string) (interface{}, error)
 }
 
-func NewJikanAPI(mediaTitle string, mediaType string) (JikanAPI, error) {
+func NewJikanAPI(mediaType string, mediaTitle string) (JikanAPI, error) {
 	return &jikanAPICached{
 		api: &jikanAPI{
 			mediaTitle: mediaTitle,

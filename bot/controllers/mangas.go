@@ -31,11 +31,11 @@ func MangasHandleUpdate(
 		_, err := bot.Send(msg)
 		return err
 	}
-	jikanAPI, err := clients.NewJikanAPI(mangaName, command)
+	jikanAPI, err := clients.NewJikanAPI(command, mangaName)
 	if err != nil {
 		return err
 	}
-	res, err := jikanAPI.SearchAnimeOrManga(mangaName, command)
+	res, err := jikanAPI.SearchAnimeOrManga(command, mangaName)
 	if err != nil {
 		return err
 	}

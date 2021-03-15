@@ -15,6 +15,37 @@ import (
 )
 
 var movies []types.Movie
+var searchClient clients.SearchMedia
+var detailsClient clients.GetDetails
+var providersClient clients.SearchProviders
+var directorsClient clients.GetMovieCredits
+
+func init() {
+	var cfg *config.Config
+	var err error
+	cfg, err = config.Wire()
+	if err != nil {
+		panic(err)
+	}
+	mediaType := "movie"
+	apiKey := cfg.MovieAcessKey.Key
+	searchClient, err = clients.NewSearchMedia(mediaType, apiKey)
+	if err != nil {
+		panic(err)
+	}
+	detailsClient, err = clients.NewGetDetails(mediaType, apiKey)
+	if err != nil {
+		panic(err)
+	}
+	providersClient, err = clients.NewSearchProviders(mediaType, apiKey)
+	if err != nil {
+		panic(err)
+	}
+	directorsClient, err = clients.NewGetMovieCredits(apiKey)
+	if err != nil {
+		panic(err)
+	}
+}
 
 // MoviesHandleUpdate send the movie message
 func MoviesHandleUpdate(
@@ -34,7 +65,7 @@ func MoviesHandleUpdate(
 		return err
 	}
 	var err error
-	movies, err = callMovieFunctions(cfg, update, mediaType, movieName)
+	movies, err = callMovieFunctions(update, mediaType, movieName)
 	if err != nil {
 		return err
 	}
@@ -60,7 +91,7 @@ func movieArrowButtonsAction(
 	if err != nil {
 		return err
 	}
-	movies, err = callMovieFunctions(cfg, update, mediaType, movies[i].Title)
+	movies, err = callMovieFunctions(update, mediaType, movies[i].Title)
 	if err != nil {
 		return err
 	}
@@ -170,7 +201,6 @@ func getMovieDirector(mov types.Movie) []string {
 }
 
 func callMovieFunctions(
-	cfg *config.Config,
 	update *tgbotapi.Update,
 	mediaType string,
 	mediaTitle string,
@@ -178,12 +208,7 @@ func callMovieFunctions(
 	var arrayPos int
 	var err error
 	var res interface{}
-	apiKey := cfg.MovieAcessKey.Key
 	if update.CallbackQuery == nil {
-		searchClient, err := clients.NewSearchMedia(mediaType, mediaTitle, apiKey)
-		if err != nil {
-			return nil, err
-		}
 		res, err = searchClient.SearchMedia(mediaType, mediaTitle)
 		if err != nil {
 			return nil, err
@@ -196,16 +221,7 @@ func callMovieFunctions(
 	} else if arrayPos, err = strconv.Atoi(update.CallbackQuery.Data); err != nil {
 		return nil, err
 	}
-	detailsClient, err := clients.NewGetDetails(mediaType, strconv.Itoa(movies[arrayPos].ID), apiKey)
-	if err != nil {
-		return nil, err
-	}
-	res, err = detailsClient.GetDetails(mediaType, strconv.Itoa(movies[arrayPos].ID))
-	if err != nil {
-		return nil, err
-	}
-	details := res.(types.MovieDetails)
-	providersClient, err := clients.NewSearchProviders(mediaType, strconv.Itoa(movies[arrayPos].ID), apiKey)
+	details, _, err := detailsClient.GetDetails(mediaType, strconv.Itoa(movies[arrayPos].ID))
 	if err != nil {
 		return nil, err
 	}
@@ -213,15 +229,11 @@ func callMovieFunctions(
 	if err != nil {
 		return nil, err
 	}
-	directorsClient, err := clients.NewGetMovieCredits(strconv.Itoa(movies[arrayPos].ID), apiKey)
-	if err != nil {
-		return nil, err
-	}
 	credits, err := directorsClient.GetMovieCredits(strconv.Itoa(movies[arrayPos].ID))
 	if err != nil {
 		return nil, err
 	}
-	movies[arrayPos].Details = details
+	movies[arrayPos].Details = *details
 	movies[arrayPos].Providers = *providers
 	movies[arrayPos].Credits = *credits
 	return movies, nil

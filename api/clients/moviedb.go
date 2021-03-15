@@ -22,7 +22,7 @@ type SearchMedia interface {
 	SearchMedia(string, string) (interface{}, error)
 }
 
-func NewSearchMedia(mediaType string, mediaTitle string, apiKey string) (SearchMedia, error) {
+func NewSearchMedia(mediaType string, apiKey string) (SearchMedia, error) {
 	return &movieAPICached{
 		api: &theMovieDBAPI{
 			apiKey: apiKey,
@@ -36,7 +36,7 @@ type SearchProviders interface {
 	SearchProviders(string, string) (*types.WatchProviders, error)
 }
 
-func NewSearchProviders(mediaType string, mediaID string, apiKey string) (SearchProviders, error) {
+func NewSearchProviders(mediaType string, apiKey string) (SearchProviders, error) {
 	return &providersCached{
 		api: &theMovieDBAPI{
 			apiKey: apiKey,
@@ -47,10 +47,10 @@ func NewSearchProviders(mediaType string, mediaID string, apiKey string) (Search
 }
 
 type GetDetails interface {
-	GetDetails(string, string) (interface{}, error)
+	GetDetails(string, string) (*types.MovieDetails, *types.TVShowDetails, error)
 }
 
-func NewGetDetails(mediaType string, mediaID string, apiKey string) (GetDetails, error) {
+func NewGetDetails(mediaType string, apiKey string) (GetDetails, error) {
 	return &detailsCached{
 		api: &theMovieDBAPI{
 			apiKey: apiKey,
@@ -64,7 +64,7 @@ type GetMovieCredits interface {
 	GetMovieCredits(string) (*types.MovieCredits, error)
 }
 
-func NewGetMovieCredits(movieID string, apiKey string) (GetMovieCredits, error) {
+func NewGetMovieCredits(apiKey string) (GetMovieCredits, error) {
 	return &moviesCreditCached{
 		api: &theMovieDBAPI{
 			apiKey: apiKey,
@@ -163,27 +163,27 @@ func (t *theMovieDBAPI) SearchProviders(
 func (t *theMovieDBAPI) GetDetails(
 	mediaType string,
 	mediaID string,
-) (interface{}, error) {
+) (*types.MovieDetails, *types.TVShowDetails, error) {
 	log.Println("gettin details")
 	if mediaType == "movies" {
-		var details types.MovieDetails
+		var details *types.MovieDetails
 		url := "https://api.themoviedb.org/3/movie/" + url.QueryEscape(mediaID) +
 			"?api_key=" + url.QueryEscape(t.apiKey) + "&language=pt_BR"
-		if err := t.httpGETDetails(url, details); err != nil {
-			return nil, err
+		if err := t.httpGETDetails(url, &details); err != nil {
+			return nil, nil, err
 		}
-		return details, nil
+		return details, nil, nil
 	}
 	if mediaType == "tvshows" {
-		var details types.TVShowDetails
+		var details *types.TVShowDetails
 		url := "https://api.themoviedb.org/3/tv/" + url.QueryEscape(mediaID) +
 			"?api_key=" + url.QueryEscape(t.apiKey) + "&language=pt_BR"
-		if err := t.httpGETDetails(url, details); err != nil {
-			return nil, err
+		if err := t.httpGETDetails(url, &details); err != nil {
+			return nil, nil, err
 		}
-		return details, nil
+		return nil, details, nil
 	}
-	return nil, nil
+	return nil, nil, nil
 }
 
 func (t *theMovieDBAPI) httpGETDetails(url string, v interface{}) error {
@@ -197,7 +197,6 @@ func (t *theMovieDBAPI) httpGETDetails(url string, v interface{}) error {
 	if err != nil {
 		return err
 	}
-
 	err = json.Unmarshal(searchResult, &v)
 	if err != nil {
 		return err
@@ -347,27 +346,35 @@ type detailsCached struct {
 func (t *detailsCached) GetDetails(
 	mediaType string,
 	mediaID string,
-) (interface{}, error) {
+) (*types.MovieDetails, *types.TVShowDetails, error) {
 	log.Println("details cached")
 	err := t.searchDetailsKeys(mediaType, mediaID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if mediaType == "movies" {
 		if t.cache != nil {
-			return t.cache.(types.MovieDetails), nil
+			return t.cache.(*types.MovieDetails), nil, nil
 		}
+		res, _, err := t.api.GetDetails(mediaType, mediaID)
+		if err != nil {
+			return nil, nil, err
+		}
+		t.cache = res
+		return res, nil, err
 	}
 	if mediaType == "tvshows" {
 		if t.cache != nil {
-			return t.cache.(types.TVShowDetails), nil
+			return nil, t.cache.(*types.TVShowDetails), nil
 		}
+		_, res, err := t.api.GetDetails(mediaType, mediaID)
+		if err != nil {
+			return nil, nil, err
+		}
+		t.cache = res
+		return nil, res, err
 	}
-	res, err := t.api.GetDetails(mediaType, mediaID)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
+	return nil, nil, nil
 }
 
 func (t *detailsCached) searchDetailsKeys(mediaType string, mediaID string) error {

@@ -55,7 +55,7 @@ func NewMangaAPI(mangaID string, mangaName string) (MangaDetails, error) {
 	}, nil
 }
 
-func (t *jikanAPI) SearchAnimeOrManga(mediaTitle string, mediaType string) (interface{}, error) {
+func (t *jikanAPI) SearchAnimeOrManga(mediaType string, mediaTitle string) (interface{}, error) {
 	log.Println("jikan api")
 	if mediaType == "animes" {
 		var animes []types.Anime
@@ -64,6 +64,7 @@ func (t *jikanAPI) SearchAnimeOrManga(mediaTitle string, mediaType string) (inte
 		if err := t.httpGET(url, &animes); err != nil {
 			return nil, err
 		}
+
 		return animes, nil
 	}
 	if mediaType == "mangas" {
@@ -196,7 +197,7 @@ type jikanAPICached struct {
 	redis *redis.Client
 }
 
-func (t *jikanAPICached) SearchAnimeOrManga(mediaTitle string, mediaType string) (interface{}, error) {
+func (t *jikanAPICached) SearchAnimeOrManga(mediaType string, mediaTitle string) (interface{}, error) {
 	log.Println("jikan api cached")
 	var err error
 	t.redis, err = common.SetRedis()

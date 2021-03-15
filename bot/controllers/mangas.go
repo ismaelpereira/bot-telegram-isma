@@ -12,7 +12,16 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
+var mangaSearch clients.MangaDetails
 var mangas []types.Manga
+
+func init() {
+	var err error
+	mangaSearch, err = clients.NewMangaAPI()
+	if err != nil {
+		panic(err)
+	}
+}
 
 // MangaHandleUpdate is a function for manga work
 func MangasHandleUpdate(
@@ -29,10 +38,6 @@ func MangasHandleUpdate(
 	if mangaName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgMangas)
 		_, err := bot.Send(msg)
-		return err
-	}
-	jikanAPI, err := clients.NewJikanAPI(command, mangaName)
-	if err != nil {
 		return err
 	}
 	res, err := jikanAPI.SearchAnimeOrManga(command, mangaName)
@@ -60,7 +65,6 @@ func getMangasPictureAndSendMessage(
 	m types.Manga,
 ) (*tgbotapi.PhotoConfig, error) {
 	var err error
-	mangaName := strings.TrimSpace(m.Title)
 	var mMessage tgbotapi.PhotoConfig
 	if update.CallbackQuery == nil {
 		mMessage = tgbotapi.NewPhotoShare(update.Message.Chat.ID, m.CoverPicture)
@@ -75,11 +79,6 @@ func getMangasPictureAndSendMessage(
 	}
 	if chaptersNumber == "0" {
 		chaptersNumber = "?"
-	}
-	var mangaSearch clients.MangaDetails
-	mangaSearch, err = clients.NewMangaAPI(strconv.Itoa(m.ID), mangaName)
-	if err != nil {
-		return nil, err
 	}
 	japaneseName, status, err := mangaSearch.GetMangaPageDetails(strconv.Itoa(m.ID), m.Title)
 	if err != nil {

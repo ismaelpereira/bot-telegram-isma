@@ -29,11 +29,9 @@ type JikanAPI interface {
 	SearchAnimeOrManga(string, string) (interface{}, error)
 }
 
-func NewJikanAPI(mediaType string, mediaTitle string) (JikanAPI, error) {
+func NewJikanAPI() (JikanAPI, error) {
 	return &jikanAPICached{
-		api: &jikanAPI{
-			mediaTitle: mediaTitle,
-		},
+		api:   &jikanAPI{},
 		cache: nil,
 		redis: nil,
 	}, nil
@@ -43,12 +41,9 @@ type MangaDetails interface {
 	GetMangaPageDetails(string, string) ([]byte, []byte, error)
 }
 
-func NewMangaAPI(mangaID string, mangaName string) (MangaDetails, error) {
+func NewMangaAPI() (MangaDetails, error) {
 	return &mangaAPICached{
-		api: &mediaDetails{
-			ID:    mangaID,
-			title: mangaName,
-		},
+		api:         &mediaDetails{},
 		jpCache:     nil,
 		statusCache: nil,
 		redis:       nil,

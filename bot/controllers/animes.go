@@ -12,7 +12,16 @@ import (
 	"github.com/ismaelpereira/telegram-bot-isma/types"
 )
 
+var jikanAPI clients.JikanAPI
 var animes []types.Anime
+
+func init() {
+	var err error
+	jikanAPI, err = clients.NewJikanAPI()
+	if err != nil {
+		panic(err)
+	}
+}
 
 // AnimeHandleUpdate is a function for anime work
 func AnimesHandleUpdate(
@@ -29,10 +38,6 @@ func AnimesHandleUpdate(
 	if animeName == "" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgs.MsgAnimes)
 		_, err := bot.Send(msg)
-		return err
-	}
-	jikanAPI, err := clients.NewJikanAPI(animeName, mediaType)
-	if err != nil {
 		return err
 	}
 	res, err := jikanAPI.SearchAnimeOrManga(mediaType, animeName)

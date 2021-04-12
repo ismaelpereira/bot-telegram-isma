@@ -144,10 +144,10 @@ func (t *mangaAPICached) GetMangaPageDetails(mangaID string, mangaName string) (
 	t.statusCache = statusRes
 	jpKey := "telegram:manga:details:japaneseName:" + mangaName
 	statusKey := "telegram:manga:details:status:" + mangaName
-	if err = t.redis.Set(jpKey, jpRes, 30*time.Second).Err(); err != nil {
+	if err = t.redis.Set(jpKey, jpRes, 72*time.Hour).Err(); err != nil {
 		return nil, nil, err
 	}
-	if err = t.redis.Set(statusKey, statusRes, 30*time.Second).Err(); err != nil {
+	if err = t.redis.Set(statusKey, statusRes, 72*time.Hour).Err(); err != nil {
 		return nil, nil, err
 	}
 	return jpRes, statusRes, nil
@@ -174,6 +174,7 @@ func (t *mangaAPICached) searchRedisDetailsKeys(mangaName string) error {
 				return err
 			}
 			t.jpCache = data
+			return nil
 		}
 		if strings.TrimPrefix(details, "status:") == mangaName {
 			data, err := t.redis.Get(key).Bytes()
@@ -181,8 +182,11 @@ func (t *mangaAPICached) searchRedisDetailsKeys(mangaName string) error {
 				return err
 			}
 			t.statusCache = data
+			return nil
 		}
 	}
+	t.jpCache = nil
+	t.statusCache = nil
 	return nil
 }
 

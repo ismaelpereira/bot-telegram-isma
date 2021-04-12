@@ -332,8 +332,10 @@ func (t *providersCached) searchRedisProvidersKeys(mediaType string, mediaID str
 				return err
 			}
 			t.cache = providers
+			return nil
 		}
 	}
+	t.cache = nil
 	return nil
 }
 
@@ -402,14 +404,17 @@ func (t *detailsCached) searchDetailsKeys(mediaType string, mediaID string) erro
 				return err
 			}
 			t.cache = movieDetails
+			return nil
 		}
 		if mediaType == "tvshows" {
 			if err = json.Unmarshal(data, &tvShowDetails); err != nil {
 				return err
 			}
 			t.cache = tvShowDetails
+			return nil
 		}
 	}
+	t.cache = nil
 	return nil
 }
 
@@ -470,8 +475,9 @@ func (t *moviesCreditCached) getCreditKeys(movieID string) error {
 				return err
 			}
 			t.cache = credits
+			return nil
 		}
 	}
-
+	t.cache = nil
 	return nil
 }
